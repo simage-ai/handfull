@@ -17,6 +17,34 @@ const processName = (name: string | null | undefined) => {
   };
 };
 
+// Default meal plan templates for new users
+const DEFAULT_MEAL_PLANS = [
+  {
+    name: "Cut",
+    proteinSlots: 4,
+    carbSlots: 2,
+    veggieSlots: 3,
+    fatSlots: 1,
+    junkSlots: 0,
+  },
+  {
+    name: "Maintain",
+    proteinSlots: 4,
+    carbSlots: 3,
+    veggieSlots: 3,
+    fatSlots: 2,
+    junkSlots: 1,
+  },
+  {
+    name: "Bulk",
+    proteinSlots: 5,
+    carbSlots: 4,
+    veggieSlots: 3,
+    fatSlots: 2,
+    junkSlots: 1,
+  },
+];
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Google({
@@ -28,23 +56,51 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user }) {
       if (!user.email) return false;
 
-      // Upsert user in database on sign in
       const { firstName, lastName } = processName(user.name);
 
-      await prisma.user.upsert({
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
         where: { email: user.email },
-        update: {
-          firstName,
-          lastName,
-          image: user.image,
-        },
-        create: {
-          email: user.email,
-          firstName,
-          lastName,
-          image: user.image,
-        },
       });
+
+      if (existingUser) {
+        // Update existing user
+        await prisma.user.update({
+          where: { email: user.email },
+          data: {
+            firstName,
+            lastName,
+            image: user.image,
+          },
+        });
+      } else {
+        // Create new user with default meal plans
+        const newUser = await prisma.user.create({
+          data: {
+            email: user.email,
+            firstName,
+            lastName,
+            image: user.image,
+          },
+        });
+
+        // Create default meal plans for new user
+        const createdPlans = await prisma.plan.createManyAndReturn({
+          data: DEFAULT_MEAL_PLANS.map((plan) => ({
+            ...plan,
+            userId: newUser.id,
+          })),
+        });
+
+        // Set "Cut" plan as active by default
+        const cutPlan = createdPlans.find((p) => p.name === "Cut");
+        if (cutPlan) {
+          await prisma.user.update({
+            where: { id: newUser.id },
+            data: { activePlanId: cutPlan.id },
+          });
+        }
+      }
 
       return true;
     },

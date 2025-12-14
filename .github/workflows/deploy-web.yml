@@ -141,6 +141,15 @@ jobs:
             --service-account=${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       # -----------------------------------------------------------------------
+      # Route Traffic to Latest Revision
+      # -----------------------------------------------------------------------
+      - name: Route traffic to latest
+        run: |
+          gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --to-latest
+
+      # -----------------------------------------------------------------------
       # Output Service URL
       # -----------------------------------------------------------------------
       - name: Get Service URL

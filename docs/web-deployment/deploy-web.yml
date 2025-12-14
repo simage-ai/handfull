@@ -129,6 +129,8 @@ jobs:
             --set-cloudsql-instances=${{ secrets.CLOUD_SQL_CONNECTION }} \
             --set-secrets="\
               DATABASE_URL=handfull-database-url:latest,\
+              AUTH_SECRET=handfull-nextauth-secret:latest,\
+              AUTH_URL=handfull-nextauth-url:latest,\
               NEXTAUTH_SECRET=handfull-nextauth-secret:latest,\
               NEXTAUTH_URL=handfull-nextauth-url:latest,\
               AUTH_GOOGLE_ID=handfull-google-client-id:latest,\
@@ -137,6 +139,15 @@ jobs:
               STRIPE_WEBHOOK_SECRET=handfull-stripe-webhook-secret:latest,\
               GCS_BUCKET_NAME=handfull-gcs-bucket:latest" \
             --service-account=${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # -----------------------------------------------------------------------
+      # Route Traffic to Latest Revision
+      # -----------------------------------------------------------------------
+      - name: Route traffic to latest
+        run: |
+          gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --to-latest
 
       # -----------------------------------------------------------------------
       # Output Service URL
