@@ -1,0 +1,32 @@
+name: Test WIF
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test Authentication
+        run: |
+          echo "Authenticated as:"
+          gcloud auth list
+          echo ""
+          echo "Project:"
+          gcloud config get-value project
+          echo ""
+          echo "Testing Cloud Run access:"
+          gcloud run services list --region=${{ secrets.GCP_REGION }} || echo "No services yet"
