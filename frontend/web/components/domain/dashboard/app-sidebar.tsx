@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Home,
   UtensilsCrossed,
@@ -12,6 +13,16 @@ import {
   BookOpen,
   Dumbbell,
 } from "lucide-react";
+import { GITHUB_REPO_URL } from "@/lib/config";
+
+// Dynamic import to avoid SSR issues with the GitHub button
+const GitHubButton = dynamic(() => import("react-github-btn"), { ssr: false });
+
+// Extract owner and repo from URL
+const getRepoInfo = () => {
+  const match = GITHUB_REPO_URL.match(/github\.com\/([^/]+)\/([^/]+)/);
+  return match ? { owner: match[1], repo: match[2] } : null;
+};
 import {
   Sidebar,
   SidebarContent,
@@ -99,7 +110,20 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="p-4 space-y-3">
+        {getRepoInfo() && (
+          <div className="flex items-center justify-center border-b pb-2">
+            <GitHubButton
+              href={GITHUB_REPO_URL}
+              data-color-scheme="no-preference: light; light: light; dark: dark;"
+              data-size="small"
+              data-show-count="true"
+              aria-label={`Star ${getRepoInfo()!.owner}/${getRepoInfo()!.repo} on GitHub`}
+            >
+              Star
+            </GitHubButton>
+          </div>
+        )}
         <Button className="w-full" onClick={() => setAddDialogOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Entry
