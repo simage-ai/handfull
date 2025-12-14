@@ -11,6 +11,9 @@ function getEnvVar(key: string, required = true): string {
   return value || "";
 }
 
+// Public constants (not secrets)
+export const GITHUB_REPO_URL = "https://github.com/simage-ai/handfull";
+
 export const config = {
   // Database
   databaseUrl: () => getEnvVar("DATABASE_URL"),

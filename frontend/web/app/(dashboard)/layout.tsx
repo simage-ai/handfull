@@ -8,6 +8,7 @@ import {
 import { AppSidebar } from "@/components/domain/dashboard/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { UserNav } from "@/components/common/user-nav";
+import { GitHubLinks } from "@/components/common/github-links";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 
 export default async function DashboardLayout({
@@ -32,6 +33,7 @@ export default async function DashboardLayout({
             <h1 className="text-lg font-semibold">Dashboard</h1>
           </div>
           <div className="flex items-center gap-2">
+            <GitHubLinks />
             <AnimatedThemeToggler />
             <UserNav user={session.user} />
           </div>
