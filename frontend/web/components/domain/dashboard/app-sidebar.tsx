@@ -112,7 +112,8 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 space-y-3">
         {getRepoInfo() && (
-          <div className="flex items-center justify-center border-b pb-2">
+          <div className="flex flex-col items-center justify-center border-b pb-2">
+          <div className="flex items-center justify-center">
             <GitHubButton
               href={GITHUB_REPO_URL}
               data-color-scheme="no-preference: light; light: light; dark: dark;"
@@ -122,6 +123,8 @@ export function AppSidebar() {
             >
               Star
             </GitHubButton>
+          </div>
+        <span className="text-xs text-muted-foreground">Send us a GitHub star!</span>
           </div>
         )}
         <Button className="w-full" onClick={() => setAddDialogOpen(true)}>
