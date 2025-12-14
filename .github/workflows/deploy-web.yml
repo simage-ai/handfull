@@ -129,6 +129,8 @@ jobs:
             --set-cloudsql-instances=${{ secrets.CLOUD_SQL_CONNECTION }} \
             --set-secrets="\
               DATABASE_URL=handfull-database-url:latest,\
+              AUTH_SECRET=handfull-nextauth-secret:latest,\
+              AUTH_URL=handfull-nextauth-url:latest,\
               NEXTAUTH_SECRET=handfull-nextauth-secret:latest,\
               NEXTAUTH_URL=handfull-nextauth-url:latest,\
               AUTH_GOOGLE_ID=handfull-google-client-id:latest,\
