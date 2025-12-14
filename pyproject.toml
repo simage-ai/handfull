@@ -1,0 +1,10 @@
+[project]
+name = "palm"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "corm",
+]
+
+[tool.uv.sources]
+corm = { path = "../../simage/cormorant" }

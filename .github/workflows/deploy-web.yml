@@ -1,0 +1,210 @@
+# =============================================================================
+# HandFull Web - Deploy to Cloud Run
+# =============================================================================
+# This workflow builds and deploys the Next.js web application to Cloud Run
+# using Workload Identity Federation (WIF) for keyless authentication.
+#
+# Triggers:
+#   - Push to main branch (auto-deploy to production)
+#   - Manual workflow dispatch
+#
+# Required GitHub Secrets:
+#   - GCP_PROJECT_ID: Your GCP project ID
+#   - GCP_REGION: GCP region (e.g., us-central1)
+#   - GCP_WIF_PROVIDER: Full WIF provider path
+#   - GCP_SERVICE_ACCOUNT: Service account email
+#   - CLOUD_SQL_CONNECTION: Cloud SQL instance connection name
+#   - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: Stripe publishable key
+# =============================================================================
+
+name: Deploy Web to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/web/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  SERVICE_NAME: handball-web
+  ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/handball-web
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    # Required for WIF
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # -----------------------------------------------------------------------
+      # Checkout
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Authenticate to Google Cloud using WIF
+      # -----------------------------------------------------------------------
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      # -----------------------------------------------------------------------
+      # Set up Cloud SDK
+      # -----------------------------------------------------------------------
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # -----------------------------------------------------------------------
+      # Configure Docker for Artifact Registry
+      # -----------------------------------------------------------------------
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # -----------------------------------------------------------------------
+      # Build and Push Docker Image
+      # -----------------------------------------------------------------------
+      - name: Build and Push Docker Image
+        working-directory: frontend/web
+        run: |
+          # Generate image tag using git SHA
+          IMAGE_TAG="${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE_LATEST="${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:latest"
+
+          # Build the image
+          docker build \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
+            --tag "${IMAGE_TAG}" \
+            --tag "${IMAGE_LATEST}" \
+            --cache-from "${IMAGE_LATEST}" \
+            .
+
+          # Push both tags
+          docker push "${IMAGE_TAG}"
+          docker push "${IMAGE_LATEST}"
+
+          # Export for next step
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
+      # -----------------------------------------------------------------------
+      # Deploy to Cloud Run
+      # -----------------------------------------------------------------------
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.IMAGE_TAG }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=8080 \
+            --cpu=1 \
+            --memory=512Mi \
+            --min-instances=0 \
+            --max-instances=10 \
+            --concurrency=80 \
+            --timeout=60s \
+            --set-cloudsql-instances=${{ secrets.CLOUD_SQL_CONNECTION }} \
+            --set-secrets="\
+              DATABASE_URL=handball-database-url:latest,\
+              NEXTAUTH_SECRET=handball-nextauth-secret:latest,\
+              NEXTAUTH_URL=handball-nextauth-url:latest,\
+              AUTH_GOOGLE_ID=handball-google-client-id:latest,\
+              AUTH_GOOGLE_SECRET=handball-google-client-secret:latest,\
+              STRIPE_SECRET_KEY=handball-stripe-secret-key:latest,\
+              STRIPE_WEBHOOK_SECRET=handball-stripe-webhook-secret:latest,\
+              GCS_BUCKET_NAME=handball-gcs-bucket:latest" \
+            --service-account=${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # -----------------------------------------------------------------------
+      # Output Service URL
+      # -----------------------------------------------------------------------
+      - name: Get Service URL
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --format='value(status.url)')
+          echo "## Deployment Successful! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** ${SERVICE_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ---------------------------------------------------------------------------
+  # Run Database Migrations (Optional - uncomment if needed)
+  # ---------------------------------------------------------------------------
+  # migrate:
+  #   name: Run Migrations
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-deploy
+  #
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+  #
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Authenticate to Google Cloud
+  #       uses: google-github-actions/auth@v2
+  #       with:
+  #         workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+  #         service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  #
+  #     - name: Set up Cloud SDK
+  #       uses: google-github-actions/setup-gcloud@v2
+  #
+  #     - name: Install Cloud SQL Proxy
+  #       run: |
+  #         curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.8.0/cloud-sql-proxy.linux.amd64
+  #         chmod +x cloud-sql-proxy
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '22'
+  #
+  #     - name: Install pnpm
+  #       uses: pnpm/action-setup@v2
+  #       with:
+  #         version: latest
+  #
+  #     - name: Install dependencies
+  #       working-directory: frontend/web
+  #       run: pnpm install --frozen-lockfile
+  #
+  #     - name: Run Migrations
+  #       working-directory: frontend/web
+  #       run: |
+  #         # Start Cloud SQL Proxy in background
+  #         ./cloud-sql-proxy ${{ secrets.CLOUD_SQL_CONNECTION }} &
+  #         sleep 5
+  #
+  #         # Run migrations
+  #         DATABASE_URL="postgresql://user:pass@localhost:5432/db" npx prisma migrate deploy
+  #
+  #         # Stop proxy
+  #         kill %1
