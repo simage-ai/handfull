@@ -9,6 +9,7 @@ import { WeeklyProgressWidget } from "@/components/domain/dashboard/weekly-progr
 import { HistoricalProgressChart } from "@/components/domain/dashboard/historical-progress-chart";
 import { UsageCostWidget } from "@/components/domain/dashboard/usage-cost-widget";
 import { DashboardModeToggle } from "@/components/domain/dashboard/dashboard-mode-toggle";
+import { AddEntryButton } from "@/components/domain/dashboard/add-entry-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -201,28 +202,38 @@ export function DashboardContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Mobile header (stacked, uses Add Entry dialog pattern) */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-2xl font-bold tracking-tight">Home</h2>
+          <AddEntryButton buttonSize="sm" />
+        </div>
+        <p className="text-muted-foreground">Welcome back, {userName}!</p>
+        <DashboardModeToggle mode={mode} onModeChange={handleModeChange} />
+      </div>
+
+      {/* Desktop header (unchanged layout) */}
+      <div className="hidden sm:flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Home</h2>
           <p className="text-muted-foreground">Welcome back, {userName}!</p>
         </div>
         <div className="flex items-center gap-4">
           <DashboardModeToggle mode={mode} onModeChange={handleModeChange} />
-          <Button asChild>
-            <Link href={mode === "meals" ? "/add-meal" : "/add-work"}>
-              {mode === "meals" ? (
-                <>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Quick Add Meal
-                </>
-              ) : (
-                <>
-                  <Dumbbell className="mr-2 h-4 w-4" />
-                  Quick Log Workout
-                </>
-              )}
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild>
+              <Link href="/add-meal">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Quick Add Meal
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/add-work">
+                <Dumbbell className="mr-2 h-4 w-4" />
+                Quick Log Workout
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 

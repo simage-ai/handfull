@@ -18,9 +18,9 @@ export function DashboardModeToggle({
     <Tabs
       value={mode}
       onValueChange={(value) => onModeChange(value as DashboardMode)}
-      className="w-auto"
+      className="w-full sm:w-auto"
     >
-      <TabsList className="grid w-[200px] grid-cols-2">
+      <TabsList className="grid w-full sm:w-[200px] grid-cols-2">
         <TabsTrigger value="meals" className="flex items-center gap-2">
           <UtensilsCrossed className="h-4 w-4" />
           Meals

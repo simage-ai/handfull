@@ -569,7 +569,453 @@ export default function PlansPage() {
   return (
     <div className="space-y-6">
       {/* Header with toggle */}
-      <div className="flex items-center justify-between">
+      {/* Mobile header: stacked layout */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-2xl font-bold tracking-tight">Plans</h2>
+          {mode === "meals" ? (
+            <Dialog
+              open={dialogOpen}
+              onOpenChange={(open) => {
+                setDialogOpen(open);
+                if (!open) setEditingPlan(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={openCreateDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Plan
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingPlan ? "Edit Meal Plan" : "Create Meal Plan"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingPlan
+                      ? "Update your macro slot allocations."
+                      : "Set your daily macro slot allocations."}
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Plan Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Cutting Phase" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="proteinSlots"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Protein Slots</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="carbSlots"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Carb Slots</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="fatSlots"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fat Slots</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="veggieSlots"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Veggie Slots</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="junkSlots"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Junk Slots</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <Button type="submit" disabled={isSubmitting} className="w-full">
+                      {isSubmitting && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {editingPlan ? "Save Changes" : "Create Plan"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <Dialog
+              open={workoutDialogOpen}
+              onOpenChange={(open) => {
+                setWorkoutDialogOpen(open);
+                if (!open) setEditingWorkoutPlan(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={openWorkoutCreateDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Plan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingWorkoutPlan
+                      ? "Edit Workout Plan"
+                      : "Create Workout Plan"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Select exercises and set daily targets.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...workoutForm}>
+                  <form
+                    onSubmit={workoutForm.handleSubmit(onWorkoutSubmit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={workoutForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Plan Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., Morning Routine"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-4">
+                        {(
+                          Object.entries(exercisesByCategory) as [
+                            ExerciseCategory,
+                            Exercise[]
+                          ][]
+                        ).map(([category, categoryExercises]) => {
+                          const config = EXERCISE_CATEGORIES[category];
+                          const isExpanded = expandedCategories[category];
+                          const selectedCount = categoryExercises.filter(
+                            (exercise) => {
+                              const idx = workoutForm
+                                .getValues("exercises")
+                                .findIndex((e) => e.exerciseId === exercise.id);
+                              return idx !== -1 && workoutForm.getValues("exercises")[idx]?.selected;
+                            }
+                          ).length;
+
+                          return (
+                            <Collapsible
+                              key={category}
+                              open={isExpanded}
+                              onOpenChange={() => toggleCategory(category)}
+                            >
+                              <CollapsibleTrigger asChild>
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    "flex w-full items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors",
+                                    config.colors.border,
+                                    config.colors.bg
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {isExpanded ? (
+                                      <ChevronDown className={cn("h-4 w-4", config.colors.text)} />
+                                    ) : (
+                                      <ChevronRight className={cn("h-4 w-4", config.colors.text)} />
+                                    )}
+                                    <span
+                                      className={cn(
+                                        "text-sm font-semibold uppercase tracking-wide",
+                                        config.colors.text
+                                      )}
+                                    >
+                                      {config.label}
+                                    </span>
+                                  </div>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {selectedCount}/{categoryExercises.length}
+                                  </Badge>
+                                </button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="pt-2">
+                                <div className="space-y-2 pl-2">
+                                  {categoryExercises.map((exercise) => {
+                                    const exerciseIndex =
+                                      workoutForm
+                                        .getValues("exercises")
+                                        .findIndex(
+                                          (e) => e.exerciseId === exercise.id
+                                        );
+                                    if (exerciseIndex === -1) return null;
+
+                                    return (
+                                      <div
+                                        key={exercise.id}
+                                        className={cn(
+                                          "flex items-center gap-3 rounded-lg border p-3",
+                                          config.colors.border
+                                        )}
+                                      >
+                                        <FormField
+                                          control={workoutForm.control}
+                                          name={`exercises.${exerciseIndex}.selected`}
+                                          render={({ field }) => (
+                                            <FormItem className="flex items-center space-y-0">
+                                              <FormControl>
+                                                <Checkbox
+                                                  checked={field.value}
+                                                  onCheckedChange={field.onChange}
+                                                />
+                                              </FormControl>
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <div className="flex-1">
+                                          <p className="font-medium text-sm">
+                                            {exercise.name}
+                                            {exercise.isCustom && (
+                                              <Badge variant="outline" className="ml-2 text-xs">
+                                                Custom
+                                              </Badge>
+                                            )}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {exercise.unit}
+                                          </p>
+                                        </div>
+                                        <FormField
+                                          control={workoutForm.control}
+                                          name={`exercises.${exerciseIndex}.dailyTarget`}
+                                          render={({ field }) => (
+                                            <FormItem className="w-20">
+                                              <FormControl>
+                                                <Input
+                                                  type="number"
+                                                  min={0}
+                                                  placeholder="Target"
+                                                  {...field}
+                                                  className="h-8 text-center"
+                                                />
+                                              </FormControl>
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+
+                    {/* Custom Exercise Button */}
+                    <Dialog
+                      open={customExerciseDialogOpen}
+                      onOpenChange={setCustomExerciseDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" className="w-full">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Custom Exercise
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Create Custom Exercise</DialogTitle>
+                          <DialogDescription>
+                            Add a new exercise to your library.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <Form {...customExerciseForm}>
+                          <form
+                            onSubmit={customExerciseForm.handleSubmit(
+                              onCustomExerciseSubmit
+                            )}
+                            className="space-y-4"
+                          >
+                            <FormField
+                              control={customExerciseForm.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Exercise Name</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="e.g., Box Jumps"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={customExerciseForm.control}
+                              name="category"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Category</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select a category" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {(
+                                        Object.entries(EXERCISE_CATEGORIES) as [
+                                          ExerciseCategory,
+                                          (typeof EXERCISE_CATEGORIES)[ExerciseCategory]
+                                        ][]
+                                      ).map(([key, config]) => (
+                                        <SelectItem key={key} value={key}>
+                                          {config.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={customExerciseForm.control}
+                              name="unit"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Unit</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="e.g., reps, seconds, meters"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <Button
+                              type="submit"
+                              disabled={isCustomExerciseSubmitting}
+                              className="w-full"
+                            >
+                              {isCustomExerciseSubmitting && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              )}
+                              Create Exercise
+                            </Button>
+                          </form>
+                        </Form>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Button
+                      type="submit"
+                      disabled={isWorkoutSubmitting}
+                      className="w-full"
+                    >
+                      {isWorkoutSubmitting && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {editingWorkoutPlan ? "Save Changes" : "Create Plan"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+        <p className="text-muted-foreground">
+          {mode === "meals"
+            ? "Create and manage your daily macro slot allocations."
+            : "Create and manage your daily exercise targets."}
+        </p>
+        <Tabs
+          value={mode}
+          onValueChange={(value) => handleModeChange(value as PlanMode)}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="meals" className="flex items-center justify-center gap-2">
+              <UtensilsCrossed className="h-4 w-4" />
+              Meals
+            </TabsTrigger>
+            <TabsTrigger
+              value="workouts"
+              className="flex items-center justify-center gap-2"
+            >
+              <Dumbbell className="h-4 w-4" />
+              Work
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Desktop header: original horizontal layout */}
+      <div className="hidden sm:flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Plans</h2>
           <p className="text-muted-foreground">
