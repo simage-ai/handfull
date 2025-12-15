@@ -6,11 +6,11 @@ import { revalidatePath } from "next/cache";
 import { deleteMealImage } from "@/lib/gcs";
 
 const UpdateMealSchema = z.object({
-  proteinsUsed: z.number().int().min(0).optional(),
-  fatsUsed: z.number().int().min(0).optional(),
-  carbsUsed: z.number().int().min(0).optional(),
-  veggiesUsed: z.number().int().min(0).optional(),
-  junkUsed: z.number().int().min(0).optional(),
+  proteinsUsed: z.number().min(0).optional(),
+  fatsUsed: z.number().min(0).optional(),
+  carbsUsed: z.number().min(0).optional(),
+  veggiesUsed: z.number().min(0).optional(),
+  junkUsed: z.number().min(0).optional(),
   image: z.string().optional().nullable(),
   mealCategory: z
     .enum(["BREAKFAST", "LUNCH", "DINNER", "SNACK"])
