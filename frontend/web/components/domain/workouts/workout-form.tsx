@@ -325,7 +325,8 @@ export function WorkoutForm({
                                   <Input
                                     type="number"
                                     min={0}
-                                    value={exerciseValue}
+                                    placeholder="0"
+                                    value={exerciseValue || ""}
                                     onChange={(e) =>
                                       setExerciseValue(
                                         pe.exerciseId,
