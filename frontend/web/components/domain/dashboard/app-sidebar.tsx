@@ -34,6 +34,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/common/logo";
@@ -58,21 +59,27 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const { setOpenMobile, isMobile } = useSidebar();
 
   const handleAddOption = (type: "meal" | "workout") => {
     setAddDialogOpen(false);
+    if (isMobile) setOpenMobile(false);
     router.push(type === "meal" ? "/add-meal" : "/add-work");
+  };
+
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
   };
 
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard">
+          <Link href="/dashboard" onClick={handleNavClick}>
             <Logo width={50} height={50} showName={false} />
           </Link>
           <div className="flex flex-col">
-            <Link href="/dashboard" className="text-xl font-bold tracking-tight hover:text-primary transition-colors">
+            <Link href="/dashboard" onClick={handleNavClick} className="text-xl font-bold tracking-tight hover:text-primary transition-colors">
               HandFull
             </Link>
             <span className="text-xs text-muted-foreground">
@@ -98,7 +105,7 @@ export function AppSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={handleNavClick}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
