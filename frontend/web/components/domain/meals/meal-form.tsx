@@ -85,6 +85,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
   const form = useForm<MealFormValues>({
     resolver: zodResolver(mealFormSchema),
     defaultValues: {
+      // For edit mode, use actual values; for new meals, use 0 (placeholder will still show)
       proteinsUsed: meal?.proteinsUsed ?? 0,
       fatsUsed: meal?.fatsUsed ?? 0,
       carbsUsed: meal?.carbsUsed ?? 0,
@@ -337,7 +338,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Proteins</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -351,7 +352,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Carbs</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -365,7 +366,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Fats</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -379,7 +380,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Veggies</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -393,7 +394,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Junk</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
