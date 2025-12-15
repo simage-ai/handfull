@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay, format, subDays } from "date-fns";
+import { startOfDay, endOfDay, format, subDays, parseISO } from "date-fns";
 import { DashboardContent } from "@/components/domain/dashboard/dashboard-content";
 
 interface WeeklyData {
@@ -222,8 +222,10 @@ async function getDashboardData(userId: string) {
     });
 
     // Build a map of dates from first meal to today
-    const daysDiff = Math.ceil(
-      (todayEnd.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
+    // Use startOfDay for both to get accurate day count (avoids off-by-one from endOfDay)
+    const todayStart = startOfDay(today);
+    const daysDiff = Math.round(
+      (todayStart.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     const mealsByDate = new Map<
       string,
@@ -270,11 +272,13 @@ async function getDashboardData(userId: string) {
     }
 
     // Convert to array sorted by date
+    // Use parseISO to avoid timezone issues (new Date("2024-12-14") is UTC, parseISO is local)
+    const todayKey = format(today, "yyyy-MM-dd");
     const data = Array.from(mealsByDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([dateKey, totals]) => ({
-        date: format(new Date(dateKey), "MMM d"),
-        dateShort: format(new Date(dateKey), "M/d"),
+        date: format(parseISO(dateKey), "MMM d"),
+        dateShort: dateKey === todayKey ? "Today" : format(parseISO(dateKey), "M/d"),
         ...totals,
       }));
 

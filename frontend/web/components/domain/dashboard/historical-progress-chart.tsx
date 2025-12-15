@@ -9,8 +9,9 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-const chartConfig = {
+const chartConfigDesktop = {
   proteins: {
     label: "Proteins",
     color: "hsl(0, 84%, 60%)",
@@ -29,6 +30,29 @@ const chartConfig = {
   },
   junk: {
     label: "Junk",
+    color: "hsl(271, 91%, 65%)",
+  },
+} satisfies ChartConfig;
+
+const chartConfigMobile = {
+  proteins: {
+    label: "P",
+    color: "hsl(0, 84%, 60%)",
+  },
+  carbs: {
+    label: "C",
+    color: "hsl(217, 91%, 60%)",
+  },
+  fats: {
+    label: "F",
+    color: "hsl(43, 96%, 56%)",
+  },
+  veggies: {
+    label: "V",
+    color: "hsl(142, 71%, 45%)",
+  },
+  junk: {
+    label: "J",
     color: "hsl(271, 91%, 65%)",
   },
 } satisfies ChartConfig;
@@ -52,6 +76,9 @@ export function HistoricalProgressChart({
   data,
   firstMealDate,
 }: HistoricalProgressChartProps) {
+  const isMobile = useIsMobile();
+  const chartConfig = isMobile ? chartConfigMobile : chartConfigDesktop;
+
   // Calculate max value for Y axis
   const maxValue = Math.max(
     ...data.flatMap((d) => [d.proteins, d.carbs, d.fats, d.veggies, d.junk])
@@ -62,13 +89,13 @@ export function HistoricalProgressChart({
   const tickInterval = data.length > 30 ? Math.floor(data.length / 10) : data.length > 14 ? 2 : 1;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0 overflow-hidden">
       <div className="text-xs text-muted-foreground text-center">
         Tracking since {firstMealDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
         {" "}&bull;{" "}
         {data.length} days
       </div>
-      <ChartContainer config={chartConfig} className="h-[300px] w-full">
+      <ChartContainer config={chartConfig} className="h-[200px] sm:h-[300px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             accessibilityLayer
@@ -103,7 +130,7 @@ export function HistoricalProgressChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              interval={tickInterval}
+              interval="preserveStartEnd"
               fontSize={11}
             />
             <YAxis

@@ -9,9 +9,10 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Macro colors matching the radial chart
-const chartConfig = {
+const chartConfigDesktop = {
   proteins: {
     label: "Proteins",
     color: "hsl(0, 84%, 60%)", // red-500
@@ -31,6 +32,29 @@ const chartConfig = {
   junk: {
     label: "Junk",
     color: "hsl(271, 91%, 65%)", // purple-500
+  },
+} satisfies ChartConfig;
+
+const chartConfigMobile = {
+  proteins: {
+    label: "P",
+    color: "hsl(0, 84%, 60%)",
+  },
+  carbs: {
+    label: "C",
+    color: "hsl(217, 91%, 60%)",
+  },
+  fats: {
+    label: "F",
+    color: "hsl(43, 96%, 56%)",
+  },
+  veggies: {
+    label: "V",
+    color: "hsl(142, 71%, 45%)",
+  },
+  junk: {
+    label: "J",
+    color: "hsl(271, 91%, 65%)",
   },
 } satisfies ChartConfig;
 
@@ -61,6 +85,9 @@ export function WeeklyProgressChart({
   data,
   summary,
 }: WeeklyProgressChartProps) {
+  const isMobile = useIsMobile();
+  const chartConfig = isMobile ? chartConfigMobile : chartConfigDesktop;
+
   // Calculate max value for Y axis
   const maxValue = Math.max(
     ...data.flatMap((d) => [d.proteins, d.carbs, d.fats, d.veggies, d.junk])
@@ -68,8 +95,8 @@ export function WeeklyProgressChart({
   const yAxisMax = Math.ceil(maxValue * 1.1); // 10% padding
 
   return (
-    <div className="space-y-4">
-      <ChartContainer config={chartConfig} className="h-[250px] w-full">
+    <div className="space-y-4 min-w-0 overflow-hidden">
+      <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] w-full min-w-0">
         <AreaChart
           accessibilityLayer
           data={data}

@@ -346,14 +346,14 @@ export function DashboardContent({
             </Card>
           )}
 
-          <Card className={weeklyData ? "lg:col-span-2" : "col-span-full"}>
+          <Card className={cn("min-w-0 overflow-hidden", weeklyData ? "lg:col-span-2" : "col-span-full")}>
             <CardHeader>
               <CardTitle>Your Journey</CardTitle>
               <CardDescription>
                 Daily macro intake since you started tracking
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-w-0 overflow-hidden">
               {historicalData && historicalData.data.length > 0 ? (
                 <HistoricalProgressChart
                   data={historicalData.data}
