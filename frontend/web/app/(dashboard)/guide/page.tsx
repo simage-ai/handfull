@@ -100,7 +100,7 @@ export default function GuidePage() {
                 <CardTitle className="text-red-600 dark:text-red-400">
                   Protein
                 </CardTitle>
-                <CardDescription>1 Palm = 1 Portion (~6oz / 170g)</CardDescription>
+                <CardDescription>1 Palm = 1 Portion (~6oz / 30-50g)</CardDescription>
               </div>
             </div>
           </CardHeader>

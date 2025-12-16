@@ -23,8 +23,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Loader2, Upload, X, ImageIcon } from "lucide-react";
+import { Loader2, Upload, X, ImageIcon, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mealFormSchema = z.object({
@@ -85,6 +90,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
   const form = useForm<MealFormValues>({
     resolver: zodResolver(mealFormSchema),
     defaultValues: {
+      // For edit mode, use actual values; for new meals, use 0 (placeholder will still show)
       proteinsUsed: meal?.proteinsUsed ?? 0,
       fatsUsed: meal?.fatsUsed ?? 0,
       carbsUsed: meal?.carbsUsed ?? 0,
@@ -329,7 +335,30 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
         </div>
 
         {/* Macro Inputs */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <FormLabel className="text-base">Macro Slots</FormLabel>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="sr-only">What are slots?</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs">
+                <p className="font-semibold mb-1">What is a slot?</p>
+                <p className="mb-2">A slot is one handful-sized portion:</p>
+                <ul className="space-y-1 text-xs">
+                  <li><strong>Protein:</strong> Palm-sized portion (chicken, fish, eggs)</li>
+                  <li><strong>Carbs:</strong> Cupped handful (rice, pasta, bread)</li>
+                  <li><strong>Fats:</strong> Thumb-sized portion (oil, nuts, cheese)</li>
+                  <li><strong>Veggies:</strong> Fist-sized portion (any vegetables)</li>
+                  <li><strong>Junk:</strong> Treats & processed foods</li>
+                </ul>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
           <FormField
             control={form.control}
             name="proteinsUsed"
@@ -337,7 +366,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Proteins</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -351,7 +388,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Carbs</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -365,7 +410,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Fats</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -379,7 +432,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Veggies</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -393,12 +454,21 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Junk</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+          </div>
         </div>
 
         {/* Meal Category */}
