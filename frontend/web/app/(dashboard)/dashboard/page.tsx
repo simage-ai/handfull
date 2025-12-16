@@ -1,7 +1,23 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay, format, subDays, parseISO } from "date-fns";
+import { format, subDays, parseISO } from "date-fns";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { DashboardContent } from "@/components/domain/dashboard/dashboard-content";
+import { cookies } from "next/headers";
+
+// Get start of day in user's timezone, converted to UTC for DB queries
+function getStartOfDayInTimezone(date: Date, timezone: string): Date {
+  const zonedDate = toZonedTime(date, timezone);
+  zonedDate.setHours(0, 0, 0, 0);
+  return fromZonedTime(zonedDate, timezone);
+}
+
+// Get end of day in user's timezone, converted to UTC for DB queries
+function getEndOfDayInTimezone(date: Date, timezone: string): Date {
+  const zonedDate = toZonedTime(date, timezone);
+  zonedDate.setHours(23, 59, 59, 999);
+  return fromZonedTime(zonedDate, timezone);
+}
 
 interface WeeklyData {
   data: {
@@ -36,8 +52,33 @@ interface HistoricalData {
   firstMealDate: Date | null;
 }
 
-async function getDashboardData(userId: string) {
-  const today = new Date();
+// Day chart data - cumulative values throughout the day
+interface DayChartData {
+  time: string;
+  timeValue: number;
+  proteins: number;
+  carbs: number;
+  fats: number;
+  veggies: number;
+  junk: number;
+  isMeal?: boolean;
+}
+
+// Period chart data - daily totals for week/month
+interface PeriodChartData {
+  date: string;
+  dateShort: string;
+  proteins: number;
+  carbs: number;
+  fats: number;
+  veggies: number;
+  junk: number;
+}
+
+async function getDashboardData(userId: string, timezone: string) {
+  const now = new Date();
+  const todayStart = getStartOfDayInTimezone(now, timezone);
+  const todayEnd = getEndOfDayInTimezone(now, timezone);
 
   // Get user with active plan and active workout plan
   const user = await prisma.user.findUnique({
@@ -61,8 +102,8 @@ async function getDashboardData(userId: string) {
     where: {
       userId,
       dateTime: {
-        gte: startOfDay(today),
-        lte: endOfDay(today),
+        gte: todayStart,
+        lte: todayEnd,
       },
     },
     orderBy: { dateTime: "desc" },
@@ -73,8 +114,8 @@ async function getDashboardData(userId: string) {
     where: {
       userId,
       dateTime: {
-        gte: startOfDay(today),
-        lte: endOfDay(today),
+        gte: todayStart,
+        lte: todayEnd,
       },
     },
     include: {
@@ -104,29 +145,33 @@ async function getDashboardData(userId: string) {
 
   if (user?.activePlan) {
     const plan = user.activePlan;
-    const sevenDaysAgo = subDays(today, 6);
+    const sevenDaysAgo = subDays(now, 6);
+    const sevenDaysAgoStart = getStartOfDayInTimezone(sevenDaysAgo, timezone);
 
     // Get all meals from the last 7 days
     const weeklyMeals = await prisma.meal.findMany({
       where: {
         userId,
         dateTime: {
-          gte: startOfDay(sevenDaysAgo),
-          lte: endOfDay(today),
+          gte: sevenDaysAgoStart,
+          lte: todayEnd,
         },
       },
     });
 
-    // Group meals by day
+    // Group meals by day (in user's timezone)
     const mealsByDay = new Map<string, typeof weeklyMeals>();
     for (let i = 6; i >= 0; i--) {
-      const date = subDays(today, i);
-      const dateKey = format(date, "yyyy-MM-dd");
+      const date = subDays(now, i);
+      const zonedDate = toZonedTime(date, timezone);
+      const dateKey = format(zonedDate, "yyyy-MM-dd");
       mealsByDay.set(dateKey, []);
     }
 
     for (const meal of weeklyMeals) {
-      const dateKey = format(meal.dateTime, "yyyy-MM-dd");
+      // Convert meal time to user's timezone before grouping
+      const zonedMealTime = toZonedTime(meal.dateTime, timezone);
+      const dateKey = format(zonedMealTime, "yyyy-MM-dd");
       const existing = mealsByDay.get(dateKey) || [];
       existing.push(meal);
       mealsByDay.set(dateKey, existing);
@@ -141,8 +186,9 @@ async function getDashboardData(userId: string) {
     // Build the weekly data array
     const data = [];
     for (let i = 6; i >= 0; i--) {
-      const date = subDays(today, i);
-      const dateKey = format(date, "yyyy-MM-dd");
+      const date = subDays(now, i);
+      const zonedDate = toZonedTime(date, timezone);
+      const dateKey = format(zonedDate, "yyyy-MM-dd");
       const dayMeals = mealsByDay.get(dateKey) || [];
 
       const dayTotals = dayMeals.reduce(
@@ -157,8 +203,8 @@ async function getDashboardData(userId: string) {
       );
 
       data.push({
-        day: format(date, "EEEE"),
-        dayShort: format(date, "EEE"),
+        day: format(zonedDate, "EEEE"),
+        dayShort: format(zonedDate, "EEE"),
         ...dayTotals,
       });
     }
@@ -207,25 +253,23 @@ async function getDashboardData(userId: string) {
   });
 
   if (firstMeal) {
-    const firstDate = startOfDay(firstMeal.dateTime);
-    const todayEnd = endOfDay(today);
+    // Get first meal date in user's timezone
+    const firstDateStart = getStartOfDayInTimezone(firstMeal.dateTime, timezone);
 
     // Get all meals from first entry to today
     const allMeals = await prisma.meal.findMany({
       where: {
         userId,
         dateTime: {
-          gte: firstDate,
+          gte: firstDateStart,
           lte: todayEnd,
         },
       },
     });
 
     // Build a map of dates from first meal to today
-    // Use startOfDay for both to get accurate day count (avoids off-by-one from endOfDay)
-    const todayStart = startOfDay(today);
     const daysDiff = Math.round(
-      (todayStart.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
+      (todayStart.getTime() - firstDateStart.getTime()) / (1000 * 60 * 60 * 24)
     );
     const mealsByDate = new Map<
       string,
@@ -238,11 +282,12 @@ async function getDashboardData(userId: string) {
       }
     >();
 
-    // Initialize all dates with zero values
+    // Initialize all dates with zero values (in user's timezone)
     for (let i = 0; i <= daysDiff; i++) {
-      const date = new Date(firstDate);
+      const date = new Date(firstDateStart);
       date.setDate(date.getDate() + i);
-      const dateKey = format(date, "yyyy-MM-dd");
+      const zonedDate = toZonedTime(date, timezone);
+      const dateKey = format(zonedDate, "yyyy-MM-dd");
       mealsByDate.set(dateKey, {
         proteins: 0,
         carbs: 0,
@@ -252,9 +297,10 @@ async function getDashboardData(userId: string) {
       });
     }
 
-    // Aggregate meals by date
+    // Aggregate meals by date (in user's timezone)
     for (const meal of allMeals) {
-      const dateKey = format(meal.dateTime, "yyyy-MM-dd");
+      const zonedMealTime = toZonedTime(meal.dateTime, timezone);
+      const dateKey = format(zonedMealTime, "yyyy-MM-dd");
       const existing = mealsByDate.get(dateKey) || {
         proteins: 0,
         carbs: 0,
@@ -272,8 +318,8 @@ async function getDashboardData(userId: string) {
     }
 
     // Convert to array sorted by date
-    // Use parseISO to avoid timezone issues (new Date("2024-12-14") is UTC, parseISO is local)
-    const todayKey = format(today, "yyyy-MM-dd");
+    const zonedNow = toZonedTime(now, timezone);
+    const todayKey = format(zonedNow, "yyyy-MM-dd");
     const data = Array.from(mealsByDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([dateKey, totals]) => ({
@@ -288,6 +334,140 @@ async function getDashboardData(userId: string) {
     };
   }
 
+  // Generate day chart data (cumulative throughout the day)
+  const dayChartData: DayChartData[] = [];
+
+  // Sort meals by time (ascending) for cumulative calculation
+  const sortedTodayMeals = [...todayMeals].sort(
+    (a, b) => a.dateTime.getTime() - b.dateTime.getTime()
+  );
+
+  // Start with zero at midnight
+  dayChartData.push({
+    time: "12am",
+    timeValue: 0,
+    proteins: 0,
+    carbs: 0,
+    fats: 0,
+    veggies: 0,
+    junk: 0,
+    isMeal: false,
+  });
+
+  // Add cumulative data points for each meal
+  let cumulative = { proteins: 0, carbs: 0, fats: 0, veggies: 0, junk: 0 };
+  for (const meal of sortedTodayMeals) {
+    cumulative = {
+      proteins: cumulative.proteins + meal.proteinsUsed,
+      carbs: cumulative.carbs + meal.carbsUsed,
+      fats: cumulative.fats + meal.fatsUsed,
+      veggies: cumulative.veggies + meal.veggiesUsed,
+      junk: cumulative.junk + meal.junkUsed,
+    };
+
+    const zonedMealTime = toZonedTime(meal.dateTime, timezone);
+    const hours = zonedMealTime.getHours();
+    const minutes = zonedMealTime.getMinutes();
+    const timeValue = hours * 60 + minutes;
+
+    dayChartData.push({
+      time: format(zonedMealTime, "h:mm a"),
+      timeValue,
+      ...cumulative,
+      isMeal: true,
+    });
+  }
+
+  // Add current time if after last meal
+  const zonedNow = toZonedTime(now, timezone);
+  const nowTimeValue = zonedNow.getHours() * 60 + zonedNow.getMinutes();
+  const lastDataPoint = dayChartData[dayChartData.length - 1];
+  if (nowTimeValue > lastDataPoint.timeValue) {
+    dayChartData.push({
+      time: "Now",
+      timeValue: nowTimeValue,
+      ...cumulative,
+      isMeal: false,
+    });
+  }
+
+  // Generate week chart data (for the tabs - daily totals)
+  const weekChartData: PeriodChartData[] = [];
+  if (weeklyData) {
+    for (let i = 0; i < weeklyData.data.length; i++) {
+      const dayData = weeklyData.data[i];
+      const date = subDays(now, 6 - i);
+      const zonedDate = toZonedTime(date, timezone);
+      weekChartData.push({
+        date: format(zonedDate, "MMM d"),
+        dateShort: i === weeklyData.data.length - 1 ? "Today" : format(zonedDate, "M/d"),
+        proteins: dayData.proteins,
+        carbs: dayData.carbs,
+        fats: dayData.fats,
+        veggies: dayData.veggies,
+        junk: dayData.junk,
+      });
+    }
+  }
+
+  // Generate month chart data (last 30 days)
+  const monthChartData: PeriodChartData[] = [];
+  const thirtyDaysAgo = subDays(now, 29);
+  const thirtyDaysAgoStart = getStartOfDayInTimezone(thirtyDaysAgo, timezone);
+
+  // Get all meals from the last 30 days
+  const monthlyMeals = await prisma.meal.findMany({
+    where: {
+      userId,
+      dateTime: {
+        gte: thirtyDaysAgoStart,
+        lte: todayEnd,
+      },
+    },
+  });
+
+  // Group meals by day (in user's timezone)
+  const monthMealsByDay = new Map<string, typeof monthlyMeals>();
+  for (let i = 29; i >= 0; i--) {
+    const date = subDays(now, i);
+    const zonedDate = toZonedTime(date, timezone);
+    const dateKey = format(zonedDate, "yyyy-MM-dd");
+    monthMealsByDay.set(dateKey, []);
+  }
+
+  for (const meal of monthlyMeals) {
+    const zonedMealTime = toZonedTime(meal.dateTime, timezone);
+    const dateKey = format(zonedMealTime, "yyyy-MM-dd");
+    const existing = monthMealsByDay.get(dateKey) || [];
+    existing.push(meal);
+    monthMealsByDay.set(dateKey, existing);
+  }
+
+  // Build the monthly data array
+  for (let i = 29; i >= 0; i--) {
+    const date = subDays(now, i);
+    const zonedDate = toZonedTime(date, timezone);
+    const dateKey = format(zonedDate, "yyyy-MM-dd");
+    const dayMeals = monthMealsByDay.get(dateKey) || [];
+
+    const dayTotals = dayMeals.reduce(
+      (acc, meal) => ({
+        proteins: acc.proteins + meal.proteinsUsed,
+        carbs: acc.carbs + meal.carbsUsed,
+        fats: acc.fats + meal.fatsUsed,
+        veggies: acc.veggies + meal.veggiesUsed,
+        junk: acc.junk + meal.junkUsed,
+      }),
+      { proteins: 0, carbs: 0, fats: 0, veggies: 0, junk: 0 }
+    );
+
+    monthChartData.push({
+      date: format(zonedDate, "MMM d"),
+      dateShort: i === 0 ? "Today" : format(zonedDate, "M/d"),
+      ...dayTotals,
+    });
+  }
+
   return {
     user,
     usedSlots,
@@ -295,12 +475,19 @@ async function getDashboardData(userId: string) {
     todayWorkouts,
     weeklyData,
     historicalData,
+    dayChartData,
+    weekChartData,
+    monthChartData,
   };
 }
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
+
+  // Get user's timezone from cookie, default to UTC
+  const cookieStore = await cookies();
+  const timezone = cookieStore.get("timezone")?.value || "UTC";
 
   const {
     user,
@@ -309,7 +496,10 @@ export default async function DashboardPage() {
     todayWorkouts,
     weeklyData,
     historicalData,
-  } = await getDashboardData(session.user.id);
+    dayChartData,
+    weekChartData,
+    monthChartData,
+  } = await getDashboardData(session.user.id, timezone);
 
   const mealPlan = user?.activePlan
     ? {
@@ -363,6 +553,9 @@ export default async function DashboardPage() {
       }))}
       weeklyData={weeklyData}
       historicalData={historicalData}
+      dayChartData={dayChartData}
+      weekChartData={weekChartData}
+      monthChartData={monthChartData}
     />
   );
 }

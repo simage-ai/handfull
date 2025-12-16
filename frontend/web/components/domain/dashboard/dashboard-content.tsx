@@ -7,6 +7,7 @@ import { MacroRadialChartV2 } from "@/components/domain/dashboard/macro-radial-c
 import { WorkoutRadialChart } from "@/components/domain/dashboard/workout-radial-chart";
 import { WeeklyProgressWidget } from "@/components/domain/dashboard/weekly-progress-widget";
 import { HistoricalProgressChart } from "@/components/domain/dashboard/historical-progress-chart";
+import { ProgressChartTabs, type DayDataPoint, type PeriodDataPoint } from "@/components/domain/dashboard/progress-chart-tabs";
 import { UsageCostWidget } from "@/components/domain/dashboard/usage-cost-widget";
 import { DashboardModeToggle } from "@/components/domain/dashboard/dashboard-mode-toggle";
 import { AddEntryButton } from "@/components/domain/dashboard/add-entry-button";
@@ -138,6 +139,9 @@ interface DashboardContentProps {
   todayWorkouts: Workout[];
   weeklyData: WeeklyData | null;
   historicalData: HistoricalData | null;
+  dayChartData: DayDataPoint[];
+  weekChartData: PeriodDataPoint[];
+  monthChartData: PeriodDataPoint[];
 }
 
 function formatMealCategory(category: string | null): string {
@@ -154,6 +158,9 @@ export function DashboardContent({
   todayWorkouts,
   weeklyData,
   historicalData,
+  dayChartData,
+  weekChartData,
+  monthChartData,
 }: DashboardContentProps) {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"meals" | "workouts">("meals");
@@ -348,24 +355,24 @@ export function DashboardContent({
 
           <Card className={cn("min-w-0 overflow-hidden", weeklyData ? "lg:col-span-2" : "col-span-full")}>
             <CardHeader>
-              <CardTitle>Your Journey</CardTitle>
+              <CardTitle>Progress Chart</CardTitle>
               <CardDescription>
-                Daily macro intake since you started tracking
+                Track your macro intake over time
               </CardDescription>
             </CardHeader>
             <CardContent className="min-w-0 overflow-hidden">
-              {historicalData && historicalData.data.length > 0 ? (
-                <HistoricalProgressChart
-                  data={historicalData.data}
-                  firstMealDate={historicalData.firstMealDate!}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-muted-foreground">
-                    Log your first meal to start tracking your journey!
-                  </p>
-                </div>
-              )}
+              <ProgressChartTabs
+                dayData={dayChartData}
+                weekData={weekChartData}
+                monthData={monthChartData}
+                planTargets={mealPlan ? {
+                  proteins: mealPlan.proteinSlots,
+                  carbs: mealPlan.carbSlots,
+                  fats: mealPlan.fatSlots,
+                  veggies: mealPlan.veggieSlots,
+                  junk: mealPlan.junkSlots,
+                } : undefined}
+              />
             </CardContent>
           </Card>
         </div>

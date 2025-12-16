@@ -99,7 +99,7 @@ export function MacroRadialChartV2({
       percentage:
         totalSlots.proteins > 0
           ? (usedSlots.proteins / totalSlots.proteins) * 100
-          : 0,
+          : usedSlots.proteins > 0 ? 200 : 0, // If total is 0 and used > 0, show as 200% (overflow)
       color: MACRO_COLORS.proteins,
       bgColor: bgColors.proteins,
       isOver: usedSlots.proteins > totalSlots.proteins,
@@ -110,7 +110,9 @@ export function MacroRadialChartV2({
       used: usedSlots.carbs,
       total: totalSlots.carbs,
       percentage:
-        totalSlots.carbs > 0 ? (usedSlots.carbs / totalSlots.carbs) * 100 : 0,
+        totalSlots.carbs > 0
+          ? (usedSlots.carbs / totalSlots.carbs) * 100
+          : usedSlots.carbs > 0 ? 200 : 0,
       color: MACRO_COLORS.carbs,
       bgColor: bgColors.carbs,
       isOver: usedSlots.carbs > totalSlots.carbs,
@@ -121,7 +123,9 @@ export function MacroRadialChartV2({
       used: usedSlots.fats,
       total: totalSlots.fats,
       percentage:
-        totalSlots.fats > 0 ? (usedSlots.fats / totalSlots.fats) * 100 : 0,
+        totalSlots.fats > 0
+          ? (usedSlots.fats / totalSlots.fats) * 100
+          : usedSlots.fats > 0 ? 200 : 0,
       color: MACRO_COLORS.fats,
       bgColor: bgColors.fats,
       isOver: usedSlots.fats > totalSlots.fats,
@@ -134,7 +138,7 @@ export function MacroRadialChartV2({
       percentage:
         totalSlots.veggies > 0
           ? (usedSlots.veggies / totalSlots.veggies) * 100
-          : 0,
+          : usedSlots.veggies > 0 ? 200 : 0,
       color: MACRO_COLORS.veggies,
       bgColor: bgColors.veggies,
       isOver: usedSlots.veggies > totalSlots.veggies,
@@ -145,7 +149,9 @@ export function MacroRadialChartV2({
       used: usedSlots.junk,
       total: totalSlots.junk,
       percentage:
-        totalSlots.junk > 0 ? (usedSlots.junk / totalSlots.junk) * 100 : 0,
+        totalSlots.junk > 0
+          ? (usedSlots.junk / totalSlots.junk) * 100
+          : usedSlots.junk > 0 ? 200 : 0,
       color: MACRO_COLORS.junk,
       bgColor: bgColors.junk,
       isOver: usedSlots.junk > totalSlots.junk,
