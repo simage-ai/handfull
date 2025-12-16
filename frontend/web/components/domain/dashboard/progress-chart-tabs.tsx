@@ -4,12 +4,11 @@ import { useState } from "react";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   XAxis,
   YAxis,
-  ReferenceLine,
-  Scatter,
-  ComposedChart,
 } from "recharts";
 import {
   ChartConfig,
@@ -172,12 +171,11 @@ export function ProgressChartTabs({
   );
 }
 
-// Day chart - cumulative with dots at meal times
+// Day chart - bar chart showing individual meal values
 function DayChart({
   data,
   chartConfig,
   maxValue,
-  planTargets,
 }: {
   data: DayDataPoint[];
   chartConfig: ChartConfig;
@@ -190,75 +188,36 @@ function DayChart({
     junk: number;
   };
 }) {
-  // Filter to only show meal points for dots
-  const mealPoints = data.filter((d) => d.isMeal);
+  // Filter to only show actual meals
+  const mealData = data.filter((d) => d.isMeal);
+
+  // If no meals, show a placeholder message
+  if (mealData.length === 0) {
+    return (
+      <div className="h-[180px] sm:h-[250px] w-full flex items-center justify-center text-muted-foreground">
+        No meals logged today
+      </div>
+    );
+  }
 
   return (
     <ChartContainer
       config={chartConfig}
       className="h-[180px] sm:h-[250px] w-full min-w-0"
     >
-      <ComposedChart
+      <BarChart
         accessibilityLayer
-        data={data}
+        data={mealData}
         margin={{ left: 0, right: 12, top: 12, bottom: 0 }}
       >
-        <defs>
-          <linearGradient id="fillProteinsDay" x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="5%"
-              stopColor="var(--color-proteins)"
-              stopOpacity={0.3}
-            />
-            <stop
-              offset="95%"
-              stopColor="var(--color-proteins)"
-              stopOpacity={0.05}
-            />
-          </linearGradient>
-          <linearGradient id="fillCarbsDay" x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="5%"
-              stopColor="var(--color-carbs)"
-              stopOpacity={0.3}
-            />
-            <stop
-              offset="95%"
-              stopColor="var(--color-carbs)"
-              stopOpacity={0.05}
-            />
-          </linearGradient>
-          <linearGradient id="fillFatsDay" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-fats)" stopOpacity={0.3} />
-            <stop
-              offset="95%"
-              stopColor="var(--color-fats)"
-              stopOpacity={0.05}
-            />
-          </linearGradient>
-          <linearGradient id="fillVeggiesDay" x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="5%"
-              stopColor="var(--color-veggies)"
-              stopOpacity={0.3}
-            />
-            <stop
-              offset="95%"
-              stopColor="var(--color-veggies)"
-              stopOpacity={0.05}
-            />
-          </linearGradient>
-          <linearGradient id="fillJunkDay" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-junk)" stopOpacity={0.3} />
-            <stop
-              offset="95%"
-              stopColor="var(--color-junk)"
-              stopOpacity={0.05}
-            />
-          </linearGradient>
-        </defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
+        <XAxis
+          dataKey="time"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          fontSize={11}
+        />
         <YAxis
           tickLine={false}
           axisLine={false}
@@ -268,114 +227,12 @@ function DayChart({
         />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
-
-        {/* Area charts for cumulative values */}
-        <Area
-          dataKey="proteins"
-          type="stepAfter"
-          stroke="var(--color-proteins)"
-          strokeWidth={2}
-          fill="url(#fillProteinsDay)"
-          dot={(props) => {
-            const { cx, cy, payload } = props;
-            if (!payload?.isMeal) return <></>;
-            return (
-              <circle
-                cx={cx}
-                cy={cy}
-                r={4}
-                fill="var(--color-proteins)"
-                stroke="white"
-                strokeWidth={2}
-              />
-            );
-          }}
-        />
-        <Area
-          dataKey="carbs"
-          type="stepAfter"
-          stroke="var(--color-carbs)"
-          strokeWidth={2}
-          fill="url(#fillCarbsDay)"
-          dot={(props) => {
-            const { cx, cy, payload } = props;
-            if (!payload?.isMeal) return <></>;
-            return (
-              <circle
-                cx={cx}
-                cy={cy}
-                r={4}
-                fill="var(--color-carbs)"
-                stroke="white"
-                strokeWidth={2}
-              />
-            );
-          }}
-        />
-        <Area
-          dataKey="fats"
-          type="stepAfter"
-          stroke="var(--color-fats)"
-          strokeWidth={2}
-          fill="url(#fillFatsDay)"
-          dot={(props) => {
-            const { cx, cy, payload } = props;
-            if (!payload?.isMeal) return <></>;
-            return (
-              <circle
-                cx={cx}
-                cy={cy}
-                r={4}
-                fill="var(--color-fats)"
-                stroke="white"
-                strokeWidth={2}
-              />
-            );
-          }}
-        />
-        <Area
-          dataKey="veggies"
-          type="stepAfter"
-          stroke="var(--color-veggies)"
-          strokeWidth={2}
-          fill="url(#fillVeggiesDay)"
-          dot={(props) => {
-            const { cx, cy, payload } = props;
-            if (!payload?.isMeal) return <></>;
-            return (
-              <circle
-                cx={cx}
-                cy={cy}
-                r={4}
-                fill="var(--color-veggies)"
-                stroke="white"
-                strokeWidth={2}
-              />
-            );
-          }}
-        />
-        <Area
-          dataKey="junk"
-          type="stepAfter"
-          stroke="var(--color-junk)"
-          strokeWidth={2}
-          fill="url(#fillJunkDay)"
-          dot={(props) => {
-            const { cx, cy, payload } = props;
-            if (!payload?.isMeal) return <></>;
-            return (
-              <circle
-                cx={cx}
-                cy={cy}
-                r={4}
-                fill="var(--color-junk)"
-                stroke="white"
-                strokeWidth={2}
-              />
-            );
-          }}
-        />
-      </ComposedChart>
+        <Bar dataKey="proteins" fill="var(--color-proteins)" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="carbs" fill="var(--color-carbs)" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="fats" fill="var(--color-fats)" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="veggies" fill="var(--color-veggies)" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="junk" fill="var(--color-junk)" radius={[2, 2, 0, 0]} />
+      </BarChart>
     </ChartContainer>
   );
 }

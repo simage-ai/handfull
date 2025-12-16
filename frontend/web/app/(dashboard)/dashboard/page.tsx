@@ -334,37 +334,16 @@ async function getDashboardData(userId: string, timezone: string) {
     };
   }
 
-  // Generate day chart data (cumulative throughout the day)
+  // Generate day chart data (individual meal values for bar chart)
   const dayChartData: DayChartData[] = [];
 
-  // Sort meals by time (ascending) for cumulative calculation
+  // Sort meals by time (ascending)
   const sortedTodayMeals = [...todayMeals].sort(
     (a, b) => a.dateTime.getTime() - b.dateTime.getTime()
   );
 
-  // Start with zero at midnight
-  dayChartData.push({
-    time: "12am",
-    timeValue: 0,
-    proteins: 0,
-    carbs: 0,
-    fats: 0,
-    veggies: 0,
-    junk: 0,
-    isMeal: false,
-  });
-
-  // Add cumulative data points for each meal
-  let cumulative = { proteins: 0, carbs: 0, fats: 0, veggies: 0, junk: 0 };
+  // Add individual data points for each meal (non-cumulative)
   for (const meal of sortedTodayMeals) {
-    cumulative = {
-      proteins: cumulative.proteins + meal.proteinsUsed,
-      carbs: cumulative.carbs + meal.carbsUsed,
-      fats: cumulative.fats + meal.fatsUsed,
-      veggies: cumulative.veggies + meal.veggiesUsed,
-      junk: cumulative.junk + meal.junkUsed,
-    };
-
     const zonedMealTime = toZonedTime(meal.dateTime, timezone);
     const hours = zonedMealTime.getHours();
     const minutes = zonedMealTime.getMinutes();
@@ -373,20 +352,28 @@ async function getDashboardData(userId: string, timezone: string) {
     dayChartData.push({
       time: format(zonedMealTime, "h:mm a"),
       timeValue,
-      ...cumulative,
+      proteins: meal.proteinsUsed,
+      carbs: meal.carbsUsed,
+      fats: meal.fatsUsed,
+      veggies: meal.veggiesUsed,
+      junk: meal.junkUsed,
       isMeal: true,
     });
   }
 
-  // Add current time if after last meal
-  const zonedNow = toZonedTime(now, timezone);
-  const nowTimeValue = zonedNow.getHours() * 60 + zonedNow.getMinutes();
-  const lastDataPoint = dayChartData[dayChartData.length - 1];
-  if (nowTimeValue > lastDataPoint.timeValue) {
+  // Add a placeholder if no meals yet
+  if (dayChartData.length === 0) {
+    const zonedNow = toZonedTime(now, timezone);
+    const hours = zonedNow.getHours();
+    const minutes = zonedNow.getMinutes();
     dayChartData.push({
-      time: "Now",
-      timeValue: nowTimeValue,
-      ...cumulative,
+      time: "No meals yet",
+      timeValue: hours * 60 + minutes,
+      proteins: 0,
+      carbs: 0,
+      fats: 0,
+      veggies: 0,
+      junk: 0,
       isMeal: false,
     });
   }
