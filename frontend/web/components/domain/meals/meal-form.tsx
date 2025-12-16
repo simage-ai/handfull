@@ -366,7 +366,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Proteins</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -380,7 +388,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Carbs</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -394,7 +410,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Fats</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -408,7 +432,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Veggies</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -422,7 +454,15 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
               <FormItem>
                 <FormLabel>Junk</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} step={0.5} placeholder="0" {...field} />
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="0"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
