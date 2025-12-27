@@ -12,6 +12,7 @@ import {
   PlusCircle,
   BookOpen,
   Dumbbell,
+  Rss,
 } from "lucide-react";
 import { GITHUB_REPO_URL } from "@/lib/config";
 
@@ -48,6 +49,7 @@ import {
 
 const menuItems = [
   { title: "Home", url: "/dashboard", icon: Home },
+  { title: "Feed", url: "/feed", icon: Rss },
   { title: "Meals", url: "/meals", icon: UtensilsCrossed },
   { title: "Workouts", url: "/workouts", icon: Dumbbell },
   { title: "Plans", url: "/plans", icon: ClipboardList },

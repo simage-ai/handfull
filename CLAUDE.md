@@ -140,10 +140,12 @@ palm/
 - **Recharts** for radial charts
 
 ### Database Models
-- **User**: email, firstName, lastName, activePlanId
+- **User**: email, firstName, lastName, activePlanId, sharingEnabled
 - **Meal**: macros (proteins, fats, carbs, veggies, junk), image, dateTime, mealCategory, notes
 - **Plan**: name, slot allocations (protein, fat, carb, veggie, junk)
 - **Note**: text, linked to Meal
+- **Follow**: follower-following relationship between users
+- **FollowRequest**: pending follow requests with token-based email verification
 
 ### REST API Pattern
 All API routes under `/app/api/rest/v1/`:
@@ -175,6 +177,56 @@ All API routes under `/app/api/rest/v1/`:
 - No authentication required for viewers
 - Gallery view of meals with sorting/filtering
 - Click to view meal details with macros and notes
+
+### Follow System & Feed
+The follow system allows users to connect with trainers, nutritionists, or friends to share and view meal logs.
+
+**Request Types:**
+- `FOLLOW`: "I want to follow your meals" - requester sees target's meals
+- `INVITE`: "Please follow my meals" - target sees requester's meals
+
+**Flow:**
+1. User enters email and selects request type in Settings
+2. System generates secure token and sends email via Resend
+3. Recipient clicks link in email → signs in if needed → accepts/rejects
+4. On accept: Follow relationship created
+
+**API Endpoints:**
+- `POST /api/rest/v1/follow-requests` - Send a follow request/invitation
+- `GET /api/rest/v1/follow-requests` - List pending requests (sent/received)
+- `GET /api/rest/v1/follow-requests/[token]` - Get request details
+- `POST /api/rest/v1/follow-requests/[token]/accept` - Accept request
+- `POST /api/rest/v1/follow-requests/[token]/reject` - Reject request
+- `GET /api/rest/v1/following` - List users I'm following
+- `GET /api/rest/v1/followers` - List users following me
+- `DELETE /api/rest/v1/following/[userId]` - Unfollow a user
+- `DELETE /api/rest/v1/followers/[userId]` - Remove a follower
+- `GET /api/rest/v1/feed` - Get combined meals from all followed users
+
+**Pages:**
+- `/feed` - Unified feed showing meals from all followed users
+- `/follow/[token]` - Accept/reject follow requests from email links
+- `/settings` - Follow management UI (send requests, view connections)
+
+**Email Service (Resend):**
+- Configure `RESEND_API_KEY` for production email delivery
+- Without API key, emails are logged to console (development mode)
+- Email templates in `lib/email.ts`
+
+### Environment Variables
+Required:
+- `DATABASE_URL` - PostgreSQL connection string
+- `AUTH_SECRET` - Auth.js secret
+- `AUTH_GOOGLE_ID` - Google OAuth client ID
+- `AUTH_GOOGLE_SECRET` - Google OAuth client secret
+- `GCS_BUCKET_NAME` - Google Cloud Storage bucket
+
+Optional:
+- `RESEND_API_KEY` - Resend API key for email delivery
+- `EMAIL_FROM` - From address for emails (default: "Palm <noreply@palm.example.com>")
+- `NEXT_PUBLIC_APP_URL` - App URL for email links
+- `AUTH_URL` - Auth.js callback URL
+- `GCP_SERVICE_ACCOUNT_KEY` - GCS service account (uses ADC if not set)
 
 ### Reference Projects
 When implementing new features, reference these existing codebases for patterns:

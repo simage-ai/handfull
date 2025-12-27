@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SharingSettings } from "@/components/domain/settings/sharing-settings";
+import { FollowSettings } from "@/components/domain/settings/follow-settings";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -65,6 +66,8 @@ export default async function SettingsPage() {
           userId={user.id}
           initialSharingEnabled={user.sharingEnabled}
         />
+
+        <FollowSettings />
       </div>
     </div>
   );

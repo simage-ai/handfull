@@ -43,6 +43,11 @@ model User {
   workoutPlans          WorkoutPlan[]
   workouts              Workout[]
   activeWorkoutPlan     WorkoutPlan?        @relation("ActiveWorkoutPlan", fields: [activeWorkoutPlanId], references: [id])
+  // Follow relationships
+  following             Follow[]            @relation("UserFollowing")
+  followers             Follow[]            @relation("UserFollowers")
+  sentFollowRequests    FollowRequest[]     @relation("SentFollowRequests")
+  receivedFollowRequests FollowRequest[]    @relation("ReceivedFollowRequests")
 
   @@map("users")
 }
@@ -135,6 +140,18 @@ enum SubscriptionStatus {
   UNPAID
 }
 
+enum FollowRequestType {
+  FOLLOW // "I want to follow your meals"
+  INVITE // "I'm inviting you to follow my meals"
+}
+
+enum FollowRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
 enum ExerciseCategory {
   LOWER_BODY_GLUTES
   UPPER_BODY_CORE
@@ -211,4 +228,41 @@ model WorkoutExercise {
 
   @@unique([workoutId, exerciseId])
   @@map("workout_exercises")
+}
+
+// Follow system - confirmed relationships
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// Follow requests - pending invitations
+model FollowRequest {
+  id           String              @id @default(uuid())
+  requesterId  String              @map("requester_id")
+  targetEmail  String              @map("target_email")
+  targetUserId String?             @map("target_user_id")
+  token        String              @unique
+  type         FollowRequestType
+  status       FollowRequestStatus @default(PENDING)
+  expiresAt    DateTime            @map("expires_at")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  requester    User                @relation("SentFollowRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetUser   User?               @relation("ReceivedFollowRequests", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId])
+  @@index([targetEmail])
+  @@index([targetUserId])
+  @@index([token])
+  @@map("follow_requests")
 }
