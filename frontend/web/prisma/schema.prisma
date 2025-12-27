@@ -33,6 +33,7 @@ model User {
   periodImageBytes      BigInt              @default(0) @map("period_image_bytes")
   activePlanId          String?             @map("active_plan_id")
   activeWorkoutPlanId   String?             @map("active_workout_plan_id")
+  activeWaterPlanId     String?             @map("active_water_plan_id")
   createdAt             DateTime            @default(now()) @map("created_at")
   updatedAt             DateTime            @updatedAt @map("updated_at")
   contributions         Contribution[]
@@ -43,6 +44,11 @@ model User {
   workoutPlans          WorkoutPlan[]
   workouts              Workout[]
   activeWorkoutPlan     WorkoutPlan?        @relation("ActiveWorkoutPlan", fields: [activeWorkoutPlanId], references: [id])
+  waterEntries          Water[]
+  waterPlans            WaterPlan[]
+  activeWaterPlan       WaterPlan?          @relation("ActiveWaterPlan", fields: [activeWaterPlanId], references: [id])
+  journalEntries        JournalEntry[]
+  tags                  Tag[]
 
   @@map("users")
 }
@@ -211,4 +217,83 @@ model WorkoutExercise {
 
   @@unique([workoutId, exerciseId])
   @@map("workout_exercises")
+}
+
+// Water tracking models
+enum WaterUnit {
+  FLUID_OUNCES
+  GLASSES
+  CUPS
+  LITERS
+  MILLILITERS
+}
+
+model Water {
+  id        String    @id @default(uuid())
+  amount    Float     @default(0)
+  unit      WaterUnit @default(FLUID_OUNCES)
+  dateTime  DateTime  @default(now()) @map("date_time")
+  userId    String    @map("user_id")
+  notes     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dateTime])
+  @@map("water_entries")
+}
+
+model WaterPlan {
+  id             String    @id @default(uuid())
+  name           String
+  dailyTarget    Float     @default(64) @map("daily_target")
+  unit           WaterUnit @default(FLUID_OUNCES)
+  userId         String    @map("user_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeForUsers User[]    @relation("ActiveWaterPlan")
+
+  @@map("water_plans")
+}
+
+// Journal/Notes models
+model JournalEntry {
+  id        String            @id @default(uuid())
+  text      String
+  dateTime  DateTime          @default(now()) @map("date_time")
+  userId    String            @map("user_id")
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags      JournalEntryTag[]
+
+  @@index([userId, dateTime])
+  @@map("journal_entries")
+}
+
+model Tag {
+  id             String            @id @default(uuid())
+  name           String
+  color          String            @default("#6366f1")
+  userId         String            @map("user_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  journalEntries JournalEntryTag[]
+
+  @@unique([name, userId])
+  @@map("tags")
+}
+
+model JournalEntryTag {
+  id             String       @id @default(uuid())
+  journalEntryId String       @map("journal_entry_id")
+  tagId          String       @map("tag_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  tag            Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([journalEntryId, tagId])
+  @@map("journal_entry_tags")
 }
