@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FeedMealDialog } from "./feed-meal-dialog";
-import { Loader2, Users, Settings } from "lucide-react";
+import { Loader2, Users, Settings, Calendar, Filter, X } from "lucide-react";
 import Link from "next/link";
 
 // Macro colors matching the radial chart
@@ -47,6 +47,15 @@ const MACRO_COLORS = {
 } as const;
 
 type MacroKey = keyof typeof MACRO_COLORS;
+
+const TIME_RANGE_OPTIONS = [
+  { value: "all", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "week", label: "This Week" },
+  { value: "month", label: "This Month" },
+] as const;
+
+type TimeRange = (typeof TIME_RANGE_OPTIONS)[number]["value"];
 
 function formatMealCategory(category: string | null): string {
   if (!category) return "Meal";
@@ -81,31 +90,30 @@ export function FeedContent() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [totalFollowing, setTotalFollowing] = useState(0);
+  const [followedUsers, setFollowedUsers] = useState<User[]>([]);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+
+  // Filters
   const [filterUserId, setFilterUserId] = useState<string>("all");
+  const [timeRange, setTimeRange] = useState<TimeRange>("all");
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Get unique users from meals for filtering
-  const uniqueUsers = meals.reduce(
-    (acc, meal) => {
-      if (!acc.find((u) => u.id === meal.user.id)) {
-        acc.push(meal.user);
-      }
-      return acc;
-    },
-    [] as User[]
-  );
-
-  // Fetch meals
+  // Fetch meals with filters
   const fetchMeals = useCallback(
-    async (reset = false) => {
+    async (reset = false, currentCursor?: string | null) => {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        if (!reset && cursor) {
-          params.set("cursor", cursor);
+        if (!reset && currentCursor) {
+          params.set("cursor", currentCursor);
+        }
+        if (filterUserId !== "all") {
+          params.set("userIds", filterUserId);
+        }
+        if (timeRange !== "all") {
+          params.set("timeRange", timeRange);
         }
 
         const res = await fetch(`/api/rest/v1/feed?${params}`);
@@ -122,20 +130,24 @@ export function FeedContent() {
         setCursor(data.meta.nextCursor);
         setHasMore(data.meta.hasMore);
         setTotalFollowing(data.meta.totalFollowing);
+        if (data.meta.followedUsers) {
+          setFollowedUsers(data.meta.followedUsers);
+        }
       } catch (error) {
         console.error("Error fetching feed:", error);
       } finally {
         setIsLoading(false);
       }
     },
-    [cursor]
+    [filterUserId, timeRange]
   );
 
-  // Initial fetch
+  // Initial fetch and refetch when filters change
   useEffect(() => {
-    fetchMeals(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setCursor(null);
+    setMeals([]);
+    fetchMeals(true, null);
+  }, [filterUserId, timeRange, fetchMeals]);
 
   // Set up intersection observer for infinite scroll
   useEffect(() => {
@@ -143,8 +155,8 @@ export function FeedContent() {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && hasMore && !isLoading) {
-          fetchMeals();
+        if (entries[0]?.isIntersecting && hasMore && !isLoading && cursor) {
+          fetchMeals(false, cursor);
         }
       },
       { threshold: 0.1, rootMargin: "100px" }
@@ -159,13 +171,14 @@ export function FeedContent() {
         observerRef.current.unobserve(currentRef);
       }
     };
-  }, [fetchMeals, hasMore, isLoading]);
+  }, [fetchMeals, hasMore, isLoading, cursor]);
 
-  // Filter meals by user
-  const filteredMeals =
-    filterUserId === "all"
-      ? meals
-      : meals.filter((m) => m.user.id === filterUserId);
+  const hasActiveFilters = filterUserId !== "all" || timeRange !== "all";
+
+  const clearFilters = () => {
+    setFilterUserId("all");
+    setTimeRange("all");
+  };
 
   const getInitials = (user: User) => {
     return `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase();
@@ -209,28 +222,66 @@ export function FeedContent() {
 
   return (
     <>
-      {/* Header bar with count and filter */}
+      {/* Header bar with count and filters */}
       <div className="mb-6 rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <p className="text-sm font-medium">
-            Following {totalFollowing}{" "}
-            {totalFollowing === 1 ? "person" : "people"}
-          </p>
-          {uniqueUsers.length > 1 && (
-            <Select value={filterUserId} onValueChange={setFilterUserId}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by person" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All People</SelectItem>
-                {uniqueUsers.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">
+              Following {totalFollowing}{" "}
+              {totalFollowing === 1 ? "person" : "people"}
+            </p>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="mr-1 h-4 w-4" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* User filter */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={filterUserId} onValueChange={setFilterUserId}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by person" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All People</SelectItem>
+                  {followedUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={user.image || undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(user)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {user.firstName} {user.lastName}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Time range filter */}
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Time range" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_RANGE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -238,10 +289,23 @@ export function FeedContent() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      ) : !isLoading && meals.length === 0 && hasActiveFilters ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
+          <Filter className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-lg font-medium text-muted-foreground mb-2">
+            No meals match your filters
+          </p>
+          <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
+            Try adjusting your filters or selecting a different time range.
+          </p>
+          <Button variant="outline" onClick={clearFilters}>
+            Clear Filters
+          </Button>
+        </div>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filteredMeals.map((meal) => {
+            {meals.map((meal) => {
               const macros = (
                 [
                   {

@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Trash2, ArrowUpDown, Eye } from "lucide-react";
+import { MoreHorizontal, Trash2, ArrowUpDown, Eye, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { EXERCISE_CATEGORIES } from "@/lib/exercises";
 import type { ExerciseCategory } from "@prisma/client";
@@ -102,6 +102,7 @@ export function WorkoutsTable({ workouts }: WorkoutsTableProps) {
       LOWER_BODY_GLUTES: 0,
       UPPER_BODY_CORE: 0,
       FULL_BODY_CARDIO: 0,
+      STRETCHES: 0,
     };
     exercises.forEach((e) => {
       summary[e.exercise.category] += e.completed;
@@ -121,7 +122,17 @@ export function WorkoutsTable({ workouts }: WorkoutsTableProps) {
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => format(new Date(row.getValue("dateTime")), "PPp"),
+      cell: ({ row }) => {
+        const workout = row.original;
+        return (
+          <button
+            onClick={() => openViewDialog(workout)}
+            className="text-left hover:underline text-primary font-medium"
+          >
+            {format(new Date(row.getValue("dateTime")), "PPp")}
+          </button>
+        );
+      },
     },
     {
       id: "exercises",
@@ -131,6 +142,19 @@ export function WorkoutsTable({ workouts }: WorkoutsTableProps) {
         return (
           <span className="text-muted-foreground">
             {workout.exercises.length} exercises
+          </span>
+        );
+      },
+    },
+    {
+      id: "notes",
+      header: "",
+      cell: ({ row }) => {
+        const notes = row.original.notes;
+        if (!notes) return null;
+        return (
+          <span className="inline-flex items-center text-muted-foreground" title="Has notes">
+            <StickyNote className="h-4 w-4" />
           </span>
         );
       },

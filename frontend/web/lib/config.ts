@@ -31,7 +31,7 @@ export const config = {
   // Email (Resend)
   resendApiKey: () => getEnvVar("RESEND_API_KEY", false),
   emailFrom: () =>
-    getEnvVar("EMAIL_FROM", false) || "Palm <noreply@palm.example.com>",
+    getEnvVar("EMAIL_FROM", false) || "HandFull <noreply@handfull.example.com>",
 
   // App
   appUrl: () =>

@@ -171,7 +171,7 @@ export default async function WaterPage() {
       {/* Progress and Chart Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Today's Progress */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Droplets className="h-5 w-5 text-cyan-500" />
@@ -189,12 +189,12 @@ export default async function WaterPage() {
         </Card>
 
         {/* Water Chart */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 overflow-hidden min-w-0">
           <CardHeader>
             <CardTitle>Intake History</CardTitle>
             <CardDescription>Your water intake over time</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <WaterChart
               dayData={dayChartData}
               weekData={weekChartData}

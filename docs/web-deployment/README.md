@@ -83,7 +83,7 @@ Follow [WIF_SETUP.md](./WIF_SETUP.md) to:
 ### 4. Create Artifact Registry Repository
 
 ```bash
-gcloud artifacts repositories create handball-web \
+gcloud artifacts repositories create handfull-web \
   --repository-format=docker \
   --location=$REGION \
   --description="HandFull web application images"
@@ -94,42 +94,51 @@ gcloud artifacts repositories create handball-web \
 ```bash
 # Database URL
 echo -n "postgresql://user:pass@localhost/db?host=/cloudsql/PROJECT:REGION:INSTANCE" | \
-  gcloud secrets create handball-database-url --data-file=-
+  gcloud secrets create handfull-database-url --data-file=-
 
 # NextAuth Secret
 openssl rand -base64 32 | \
-  gcloud secrets create handball-nextauth-secret --data-file=-
+  gcloud secrets create handfull-nextauth-secret --data-file=-
 
 # NextAuth URL
 echo -n "https://your-cloud-run-url.run.app" | \
-  gcloud secrets create handball-nextauth-url --data-file=-
+  gcloud secrets create handfull-nextauth-url --data-file=-
 
 # Google OAuth credentials
 echo -n "your-google-client-id" | \
-  gcloud secrets create handball-google-client-id --data-file=-
+  gcloud secrets create handfull-google-client-id --data-file=-
 
 echo -n "your-google-client-secret" | \
-  gcloud secrets create handball-google-client-secret --data-file=-
+  gcloud secrets create handfull-google-client-secret --data-file=-
 
 # Stripe keys
 echo -n "sk_live_xxx" | \
-  gcloud secrets create handball-stripe-secret-key --data-file=-
+  gcloud secrets create handfull-stripe-secret-key --data-file=-
 
 echo -n "whsec_xxx" | \
-  gcloud secrets create handball-stripe-webhook-secret --data-file=-
+  gcloud secrets create handfull-stripe-webhook-secret --data-file=-
 
 # GCS Bucket
 echo -n "your-bucket-name" | \
-  gcloud secrets create handball-gcs-bucket --data-file=-
+  gcloud secrets create handfull-gcs-bucket --data-file=-
+
+# Resend Email variables
+echo -n "RESEND_API_KEY" | \
+  gcloud secrets create handfull-resend-api-key --data-file=-
+
+echo -n "noreply@notifications.simage.ai" | \
+  gcloud secrets create handfull-resend-email-from --data-file=-
+
 ```
 
 Grant the service account access to secrets:
 ```bash
-export SA_EMAIL="handball-web-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
+export SA_EMAIL="handfull-web-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
 
-for secret in handball-database-url handball-nextauth-secret handball-nextauth-url \
-  handball-google-client-id handball-google-client-secret \
-  handball-stripe-secret-key handball-stripe-webhook-secret handball-gcs-bucket; do
+for secret in handfull-database-url handfull-nextauth-secret handfull-nextauth-url \
+  handfull-google-client-id handfull-google-client-secret \
+  handfull-stripe-secret-key handfull-stripe-webhook-secret handfull-gcs-bucket \
+  handfull-resend-api-key handfull-resend-email-from; do
   gcloud secrets add-iam-policy-binding $secret \
     --member="serviceAccount:${SA_EMAIL}" \
     --role="roles/secretmanager.secretAccessor"
@@ -145,7 +154,7 @@ Add these secrets to your GitHub repository (Settings → Secrets → Actions):
 | `GCP_PROJECT_ID` | Your GCP project ID |
 | `GCP_REGION` | e.g., `us-central1` |
 | `GCP_WIF_PROVIDER` | `projects/PROJECT_NUM/locations/global/workloadIdentityPools/POOL/providers/PROVIDER` |
-| `GCP_SERVICE_ACCOUNT` | `handball-web-deployer@PROJECT_ID.iam.gserviceaccount.com` |
+| `GCP_SERVICE_ACCOUNT` | `handfull-web-deployer@PROJECT_ID.iam.gserviceaccount.com` |
 | `CLOUD_SQL_CONNECTION` | `project:region:instance` |
 
 ### 7. Copy Deployment Files
@@ -186,6 +195,9 @@ The Cloud Run service uses these environment variables (pulled from Secret Manag
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Secret Manager |
 | `GCS_BUCKET_NAME` | GCS bucket for images | Secret Manager |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | Build arg |
+| `RESEND_API_KEY` | Resend API key to send emails | Secret Manager |
+| `EMAIL_FROM` | Resend email address that all emails will be sent from | Secret Manager |
+
 
 ## Local Testing
 
@@ -195,14 +207,14 @@ The Cloud Run service uses these environment variables (pulled from Secret Manag
 cd frontend/web
 
 # Build the image
-docker build -t handball-web .
+docker build -t handfull-web .
 
 # Run with local env vars
 docker run -p 3000:3000 \
   -e DATABASE_URL="postgresql://..." \
   -e NEXTAUTH_SECRET="test-secret" \
   -e NEXTAUTH_URL="http://localhost:3000" \
-  handball-web
+  handfull-web
 ```
 
 ### Test with Cloud SQL Auth Proxy:
@@ -215,7 +227,7 @@ cloud-sql-proxy PROJECT:REGION:INSTANCE &
 docker run -p 3000:3000 \
   --network host \
   -e DATABASE_URL="postgresql://user:pass@localhost:5432/db" \
-  handball-web
+  handfull-web
 ```
 
 ## Monitoring
@@ -223,12 +235,12 @@ docker run -p 3000:3000 \
 ### View Logs
 
 ```bash
-gcloud run services logs read handball-web --region=$REGION
+gcloud run services logs read handfull-web --region=$REGION
 ```
 
 ### Cloud Console
 
-- **Cloud Run**: Console → Cloud Run → handball-web
+- **Cloud Run**: Console → Cloud Run → handfull-web
 - **Logs**: Console → Logging → Select Cloud Run service
 - **Metrics**: Console → Monitoring → Dashboards
 
@@ -239,7 +251,7 @@ gcloud run services logs read handball-web --region=$REGION
 **1. Container fails to start**
 ```bash
 # Check logs
-gcloud run services logs read handball-web --region=$REGION --limit=50
+gcloud run services logs read handfull-web --region=$REGION --limit=50
 ```
 
 **2. Database connection fails**
@@ -263,16 +275,16 @@ gcloud run services logs read handball-web --region=$REGION --limit=50
 gcloud run services list
 
 # Describe service
-gcloud run services describe handball-web --region=$REGION
+gcloud run services describe handfull-web --region=$REGION
 
 # Get service URL
-gcloud run services describe handball-web --region=$REGION --format='value(status.url)'
+gcloud run services describe handfull-web --region=$REGION --format='value(status.url)'
 
 # View revisions
-gcloud run revisions list --service=handball-web --region=$REGION
+gcloud run revisions list --service=handfull-web --region=$REGION
 
 # Rollback to previous revision
-gcloud run services update-traffic handball-web \
+gcloud run services update-traffic handfull-web \
   --region=$REGION \
   --to-revisions=REVISION_NAME=100
 ```

@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,11 +16,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { PlusCircle, BookOpen, Tags } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { JournalTable } from "@/components/domain/journal/journal-table";
 import { JournalForm } from "@/components/domain/journal/journal-form";
-import { TagForm } from "@/components/domain/journal/tag-form";
+import { TagManager } from "@/components/domain/journal/tag-manager";
 
 async function getNotesData(userId: string) {
   const [journalEntries, tags] = await Promise.all([
@@ -82,23 +80,7 @@ export default async function NotesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Tags className="mr-2 h-4 w-4" />
-                Manage Tags
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create New Tag</DialogTitle>
-                <DialogDescription>
-                  Tags help you organize and filter your notes
-                </DialogDescription>
-              </DialogHeader>
-              <TagForm />
-            </DialogContent>
-          </Dialog>
+          <TagManager tags={tags} />
           <Dialog>
             <DialogTrigger asChild>
               <Button>
@@ -117,62 +99,6 @@ export default async function NotesPage() {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
-
-      {/* Stats and Tags Overview */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Notes</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{entries.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Notes created
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Tags Used</CardTitle>
-            <Tags className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tags.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Unique tags
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="sm:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Your Tags</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tags.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No tags yet. Create one when adding a note!
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="secondary"
-                    className="text-white"
-                    style={{ backgroundColor: tag.color }}
-                  >
-                    {tag.name}
-                    <span className="ml-1 opacity-75">({tag.usageCount})</span>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Notes Table */}

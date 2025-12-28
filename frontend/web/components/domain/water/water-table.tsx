@@ -97,7 +97,17 @@ export function WaterTable({ waterEntries }: WaterTableProps) {
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => format(new Date(row.getValue("dateTime")), "PPp"),
+      cell: ({ row }) => {
+        const water = row.original;
+        return (
+          <button
+            onClick={() => openEditDialog(water)}
+            className="text-left hover:underline text-primary font-medium"
+          >
+            {format(new Date(row.getValue("dateTime")), "PPp")}
+          </button>
+        );
+      },
     },
     {
       accessorKey: "amount",
