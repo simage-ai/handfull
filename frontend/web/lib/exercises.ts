@@ -47,6 +47,17 @@ export const EXERCISE_CATEGORIES: Record<
       chartColor: "#22c55e", // green-500
     },
   },
+  STRETCHES: {
+    label: "Stretches",
+    shortLabel: "Stretch",
+    description: "Posture and mobility stretches",
+    colors: {
+      border: "border-purple-200 dark:border-purple-900",
+      bg: "bg-purple-100 dark:bg-purple-900/30",
+      text: "text-purple-600 dark:text-purple-400",
+      chartColor: "#a855f7", // purple-500
+    },
+  },
 };
 
 export type PreDefinedExercise = {
@@ -75,6 +86,14 @@ export const PRE_DEFINED_EXERCISES: PreDefinedExercise[] = [
   { name: "Mountain Climbers", category: "FULL_BODY_CARDIO", unit: "reps" },
   { name: "Jumping Jacks", category: "FULL_BODY_CARDIO", unit: "reps" },
   { name: "Bear Crawls", category: "FULL_BODY_CARDIO", unit: "meters" },
+
+  // Stretches
+  { name: "Chest Opener", category: "STRETCHES", unit: "reps" },
+  { name: "Thoracic Spine Rotation", category: "STRETCHES", unit: "reps" },
+  { name: "Upper Trap Stretch", category: "STRETCHES", unit: "reps" },
+  { name: "Wall Angels", category: "STRETCHES", unit: "reps" },
+  { name: "Chin Tucks", category: "STRETCHES", unit: "reps" },
+  { name: "Behind Back Book Pass", category: "STRETCHES", unit: "reps" },
 ];
 
 export function getCategoryConfig(category: ExerciseCategory) {

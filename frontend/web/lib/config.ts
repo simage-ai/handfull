@@ -28,6 +28,11 @@ export const config = {
   gcsBucketName: () => getEnvVar("GCS_BUCKET_NAME"),
   gcpServiceAccountKey: () => getEnvVar("GCP_SERVICE_ACCOUNT_KEY", false),
 
+  // Email (Resend)
+  resendApiKey: () => getEnvVar("RESEND_API_KEY", false),
+  emailFrom: () =>
+    getEnvVar("EMAIL_FROM", false) || "HandFull <noreply@handfull.example.com>",
+
   // App
   appUrl: () =>
     getEnvVar("NEXT_PUBLIC_APP_URL", false) || "http://localhost:3000",

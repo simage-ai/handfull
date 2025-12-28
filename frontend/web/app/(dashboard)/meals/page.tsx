@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { MealsTable } from "@/components/domain/meals/meals-table";
+import { MealsContent } from "@/components/domain/meals/meals-content";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
@@ -9,6 +9,7 @@ async function getMeals(userId: string) {
   return prisma.meal.findMany({
     where: { userId },
     orderBy: { dateTime: "desc" },
+    include: { notes: true },
     take: 100,
   });
 }
@@ -36,7 +37,7 @@ export default async function MealsPage() {
         </Button>
       </div>
 
-      <MealsTable meals={meals} />
+      <MealsContent meals={meals} />
     </div>
   );
 }

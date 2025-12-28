@@ -29,6 +29,7 @@ const CATEGORY_BG_COLORS_LIGHT: Record<ExerciseCategory, string> = {
   LOWER_BODY_GLUTES: "#fee2e2", // red-100
   UPPER_BODY_CORE: "#dbeafe", // blue-100
   FULL_BODY_CARDIO: "#dcfce7", // green-100
+  STRETCHES: "#f3e8ff", // purple-100
 };
 
 // Dark mode background colors
@@ -36,6 +37,7 @@ const CATEGORY_BG_COLORS_DARK: Record<ExerciseCategory, string> = {
   LOWER_BODY_GLUTES: "#450a0a", // red-950
   UPPER_BODY_CORE: "#172554", // blue-950
   FULL_BODY_CARDIO: "#052e16", // green-950
+  STRETCHES: "#3b0764", // purple-950
 };
 
 export function WorkoutRadialChart({
@@ -108,6 +110,20 @@ export function WorkoutRadialChart({
       color: EXERCISE_CATEGORIES.FULL_BODY_CARDIO.colors.chartColor,
       bgColor: bgColors.FULL_BODY_CARDIO,
       isOver: completed.FULL_BODY_CARDIO > targets.FULL_BODY_CARDIO,
+    },
+    {
+      key: "STRETCHES",
+      name: EXERCISE_CATEGORIES.STRETCHES.label,
+      shortName: EXERCISE_CATEGORIES.STRETCHES.shortLabel,
+      completed: completed.STRETCHES,
+      target: targets.STRETCHES,
+      percentage:
+        targets.STRETCHES > 0
+          ? (completed.STRETCHES / targets.STRETCHES) * 100
+          : 0,
+      color: EXERCISE_CATEGORIES.STRETCHES.colors.chartColor,
+      bgColor: bgColors.STRETCHES,
+      isOver: completed.STRETCHES > targets.STRETCHES,
     },
   ];
 
@@ -204,7 +220,7 @@ export function WorkoutRadialChart({
       <svg ref={svgRef} width={size} height={size} />
 
       {/* Legend */}
-      <div className="grid grid-cols-3 gap-4 text-sm w-full max-w-[280px]">
+      <div className="grid grid-cols-4 gap-4 text-sm w-full max-w-[320px]">
         {categories.map((category) => (
           <div key={category.key} className="flex flex-col items-center gap-0.5">
             <div className="flex items-center gap-1">

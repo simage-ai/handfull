@@ -137,7 +137,9 @@ jobs:
               AUTH_GOOGLE_SECRET=handfull-google-client-secret:latest,\
               STRIPE_SECRET_KEY=handfull-stripe-secret-key:latest,\
               STRIPE_WEBHOOK_SECRET=handfull-stripe-webhook-secret:latest,\
-              GCS_BUCKET_NAME=handfull-gcs-bucket:latest" \
+              GCS_BUCKET_NAME=handfull-gcs-bucket:latest,\
+              RESEND_API_KEY=handfull-resend-api-key:latest,\
+              EMAIL_FROM=handfull-resend-email-from:latest" \
             --service-account=${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       # -----------------------------------------------------------------------

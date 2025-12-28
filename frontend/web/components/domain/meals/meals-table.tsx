@@ -35,9 +35,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Trash2, ArrowUpDown, Pencil } from "lucide-react";
+import { MoreHorizontal, Trash2, ArrowUpDown, Pencil, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { MealForm } from "./meal-form";
+
+interface Note {
+  id: string;
+  text: string;
+}
 
 interface Meal {
   id: string;
@@ -49,13 +54,15 @@ interface Meal {
   image: string | null;
   mealCategory: string | null;
   dateTime: Date;
+  notes: Note[];
 }
 
 interface MealsTableProps {
   meals: Meal[];
+  onViewMeal?: (meal: Meal) => void;
 }
 
-export function MealsTable({ meals }: MealsTableProps) {
+export function MealsTable({ meals, onViewMeal }: MealsTableProps) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
@@ -98,7 +105,17 @@ export function MealsTable({ meals }: MealsTableProps) {
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => format(new Date(row.getValue("dateTime")), "PPp"),
+      cell: ({ row }) => {
+        const meal = row.original;
+        return (
+          <button
+            onClick={() => onViewMeal?.(meal)}
+            className="text-left hover:underline text-primary font-medium"
+          >
+            {format(new Date(row.getValue("dateTime")), "PPp")}
+          </button>
+        );
+      },
     },
     {
       accessorKey: "mealCategory",
@@ -112,6 +129,20 @@ export function MealsTable({ meals }: MealsTableProps) {
         const formatted =
           category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
         return <Badge variant="secondary">{formatted}</Badge>;
+      },
+    },
+    {
+      accessorKey: "notes",
+      header: "",
+      cell: ({ row }) => {
+        const notes = row.original.notes;
+        if (!notes || notes.length === 0) return null;
+        return (
+          <span className="inline-flex items-center gap-1 text-muted-foreground" title={`${notes.length} note(s)`}>
+            <StickyNote className="h-4 w-4" />
+            <span className="text-xs">{notes.length}</span>
+          </span>
+        );
       },
     },
     {
