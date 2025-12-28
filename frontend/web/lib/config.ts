@@ -34,6 +34,8 @@ export const config = {
     getEnvVar("EMAIL_FROM", false) || "HandFull <noreply@handfull.example.com>",
 
   // App
+  // APP_URL is for server-side, NEXT_PUBLIC_APP_URL is for client-side (build-time)
   appUrl: () =>
-    getEnvVar("NEXT_PUBLIC_APP_URL", false) || "http://localhost:3000",
+    getEnvVar("APP_URL", false) ||
+    "http://localhost:3000",
 } as const;

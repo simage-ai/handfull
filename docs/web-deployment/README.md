@@ -195,7 +195,8 @@ The Cloud Run service uses these environment variables (pulled from Secret Manag
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | Secret Manager |
 | `GCS_BUCKET_NAME` | GCS bucket for images | Secret Manager |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key | Build arg |
-| `NEXT_PUBLIC_APP_URL` | Public app URL for emails/links | Build arg (hardcoded) |
+| `NEXT_PUBLIC_APP_URL` | Public app URL (client-side) | Build arg (hardcoded) |
+| `APP_URL` | Public app URL (server-side, for emails) | Env var (hardcoded) |
 | `RESEND_API_KEY` | Resend API key to send emails | Secret Manager |
 | `EMAIL_FROM` | Resend email address that all emails will be sent from | Secret Manager |
 
