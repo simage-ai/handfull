@@ -6,10 +6,10 @@ import { revalidatePath } from "next/cache";
 import { trackApiRequest } from "@/lib/usage-tracking";
 
 const CreateWaterSchema = z.object({
-  amount: z.number().min(0).default(0),
+  amount: z.coerce.number().min(0.1, "Amount must be greater than 0"),
   unit: z.enum(["FLUID_OUNCES", "GLASSES", "CUPS", "LITERS", "MILLILITERS"]).default("FLUID_OUNCES"),
   dateTime: z.string().datetime().optional(),
-  notes: z.string().max(500).optional(),
+  notes: z.string().max(500).nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {

@@ -234,24 +234,17 @@ export function WaterForm({ water, onSuccess, onCancel }: WaterFormProps) {
           )}
         />
 
-        <div className="flex gap-2">
-          {onCancel && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          )}
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-          >
+        <div className="flex gap-4">
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEditMode ? "Save Changes" : "Log Water"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel ?? (() => router.push("/water"))}
+          >
+            Cancel
           </Button>
         </div>
       </form>

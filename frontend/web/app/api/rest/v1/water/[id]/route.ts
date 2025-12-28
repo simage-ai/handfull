@@ -5,10 +5,10 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
 const UpdateWaterSchema = z.object({
-  amount: z.number().min(0).optional(),
+  amount: z.coerce.number().min(0.1, "Amount must be greater than 0").optional(),
   unit: z.enum(["FLUID_OUNCES", "GLASSES", "CUPS", "LITERS", "MILLILITERS"]).optional(),
   dateTime: z.string().datetime().optional(),
-  notes: z.string().max(500).optional().nullable(),
+  notes: z.string().max(500).nullable().optional(),
 });
 
 export async function GET(

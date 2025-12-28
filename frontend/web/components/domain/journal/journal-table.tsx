@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ColumnDef,
@@ -76,14 +76,17 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  // Filter entries by selected tag
-  const filteredEntries = selectedTagId
-    ? entries.filter((entry) =>
+  // Filter entries by selected tag (skip if "all" or empty)
+  const filteredEntries = useMemo(() => {
+    if (selectedTagId && selectedTagId !== "all") {
+      return entries.filter((entry) =>
         entry.tags.some((tag) => tag.id === selectedTagId)
-      )
-    : entries;
+      );
+    }
+    return entries;
+  }, [entries, selectedTagId]);
 
-  const deleteEntry = async (id: string) => {
+  const deleteEntry = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/rest/v1/journal/${id}`, {
         method: "DELETE",
@@ -96,12 +99,12 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
     } catch {
       toast.error("Failed to delete note");
     }
-  };
+  }, [router]);
 
-  const openEditDialog = (entry: JournalEntry) => {
+  const openEditDialog = useCallback((entry: JournalEntry) => {
     setEditingEntry(entry);
     setEditDialogOpen(true);
-  };
+  }, []);
 
   const closeEditDialog = () => {
     setEditDialogOpen(false);
@@ -109,7 +112,7 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
     router.refresh();
   };
 
-  const columns: ColumnDef<JournalEntry>[] = [
+  const columns: ColumnDef<JournalEntry>[] = useMemo(() => [
     {
       accessorKey: "dateTime",
       header: ({ column }) => (
@@ -195,7 +198,7 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
         );
       },
     },
-  ];
+  ], [openEditDialog, deleteEntry]);
 
   const table = useReactTable({
     data: filteredEntries,
@@ -221,7 +224,7 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
     setColumnFilters([]);
   };
 
-  const hasActiveFilters = globalFilter || selectedTagId;
+  const hasActiveFilters = globalFilter || (selectedTagId && selectedTagId !== "all");
 
   return (
     <>
