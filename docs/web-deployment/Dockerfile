@@ -6,10 +6,12 @@
 #
 # Build args:
 #   - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: Stripe publishable key (public)
+#   - NEXT_PUBLIC_APP_URL: Application URL for emails/links (public)
 #
 # Usage:
 #   docker build -t handball-web \
 #     --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxx \
+#     --build-arg NEXT_PUBLIC_APP_URL=https://handfull.simage.ai \
 #     -f frontend/web/Dockerfile \
 #     frontend/web
 # =============================================================================
@@ -47,7 +49,9 @@ COPY . .
 # Build arguments for public environment variables
 # These are baked into the client bundle at build time
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
 # Generate Prisma client
 RUN pnpm db:generate

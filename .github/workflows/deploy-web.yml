@@ -97,6 +97,7 @@ jobs:
           # Build the image
           docker build \
             --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
+            --build-arg NEXT_PUBLIC_APP_URL=https://handfull.simage.ai \
             --tag "${IMAGE_TAG}" \
             --tag "${IMAGE_LATEST}" \
             --cache-from "${IMAGE_LATEST}" \
