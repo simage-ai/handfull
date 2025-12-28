@@ -184,6 +184,7 @@ export function DashboardContent({
     LOWER_BODY_GLUTES: 0,
     UPPER_BODY_CORE: 0,
     FULL_BODY_CARDIO: 0,
+    STRETCHES: 0,
   };
 
   todayWorkouts.forEach((workout) => {
@@ -197,6 +198,7 @@ export function DashboardContent({
     LOWER_BODY_GLUTES: 0,
     UPPER_BODY_CORE: 0,
     FULL_BODY_CARDIO: 0,
+    STRETCHES: 0,
   };
 
   if (workoutPlan) {

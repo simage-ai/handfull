@@ -154,7 +154,7 @@ type WorkoutPlanFormValues = z.infer<typeof workoutPlanFormSchema>;
 // Custom Exercise Form
 const customExerciseFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
-  category: z.enum(["LOWER_BODY_GLUTES", "UPPER_BODY_CORE", "FULL_BODY_CARDIO"]),
+  category: z.enum(["LOWER_BODY_GLUTES", "UPPER_BODY_CORE", "FULL_BODY_CARDIO", "STRETCHES"]),
   unit: z.string().min(1, "Unit is required").max(50),
 });
 
@@ -207,6 +207,7 @@ export default function PlansPage() {
     LOWER_BODY_GLUTES: true,
     UPPER_BODY_CORE: true,
     FULL_BODY_CARDIO: true,
+    STRETCHES: true,
   });
   const [customExerciseDialogOpen, setCustomExerciseDialogOpen] =
     useState(false);
