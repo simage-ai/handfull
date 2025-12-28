@@ -140,10 +140,17 @@ palm/
 - **Recharts** for radial charts
 
 ### Database Models
-- **User**: email, firstName, lastName, activePlanId
+- **User**: email, firstName, lastName, activePlanId, activeWorkoutPlanId, activeWaterPlanId
 - **Meal**: macros (proteins, fats, carbs, veggies, junk), image, dateTime, mealCategory, notes
 - **Plan**: name, slot allocations (protein, fat, carb, veggie, junk)
-- **Note**: text, linked to Meal
+- **Note**: text, linked to Meal (meal notes)
+- **Workout**: dateTime, notes, exercises (via WorkoutExercise)
+- **WorkoutPlan**: name, exercises with daily targets
+- **Exercise**: name, category, unit, isCustom
+- **Water**: amount, unit (FLUID_OUNCES, GLASSES, CUPS, LITERS, MILLILITERS), dateTime, notes
+- **WaterPlan**: name, dailyTarget, unit
+- **JournalEntry**: text, dateTime, tags (for personal notes/journaling)
+- **Tag**: name, color (for organizing journal entries)
 
 ### REST API Pattern
 All API routes under `/app/api/rest/v1/`:
@@ -166,9 +173,34 @@ All API routes under `/app/api/rest/v1/`:
 
 ### Dashboard Features
 - Radial chart showing daily macro slot usage vs active plan
-- Sidebar navigation: Home, Meals, Plans, Settings
-- Quick add meal button
-- Today's meals summary
+- Workout radial chart showing exercise progress by category
+- Sidebar navigation: Home, Meals, Workouts, Water, Notes, Plans, Portion Guide, Settings
+- Add Entry button (opens dialog with: Log Meal, Log Workout, Log Water, Add Note)
+- Today's meals and workouts summary
+- Mode toggle between Meals and Workouts views
+
+### Water Tracking
+- **Routes**: `/water` (dashboard), `/add-water` (add entry)
+- **API**: `/api/rest/v1/water` (CRUD), `/api/rest/v1/water-plans` (CRUD + activate)
+- **Units**: Fluid Ounces, Glasses (8 oz), Cups, Liters, Milliliters
+- **Features**:
+  - Quick add presets (1 Glass, 1 Cup, 16 oz, 500 mL, 1 Liter)
+  - Automatic conversion to fluid ounces for daily totals
+  - Radial progress chart showing daily goal progress
+  - Daily/weekly bar chart history
+  - Table view with edit/delete
+- **Utility**: `lib/water.ts` for unit conversions
+
+### Notes/Journaling
+- **Routes**: `/notes` (dashboard with inline add)
+- **API**: `/api/rest/v1/journal` (CRUD), `/api/rest/v1/tags` (CRUD)
+- **Features**:
+  - Create notes with free-form text
+  - Tag notes with custom colored tags
+  - Create tags on-the-fly while adding notes
+  - Filter notes by tag, search text
+  - Table view with edit/delete
+  - Tag management with usage counts
 
 ### Share Feature
 - Public URL: `/share/{userId}`

@@ -20,7 +20,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { PlusCircle, Dumbbell } from "lucide-react";
 import type { ExerciseCategory } from "@prisma/client";
 import { EXERCISE_CATEGORIES } from "@/lib/exercises";
 import { cn } from "@/lib/utils";
@@ -221,7 +220,7 @@ export function DashboardContent({
         <DashboardModeToggle mode={mode} onModeChange={handleModeChange} />
       </div>
 
-      {/* Desktop header (unchanged layout) */}
+      {/* Desktop header */}
       <div className="hidden sm:flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Home</h2>
@@ -229,20 +228,7 @@ export function DashboardContent({
         </div>
         <div className="flex items-center gap-4">
           <DashboardModeToggle mode={mode} onModeChange={handleModeChange} />
-          <div className="flex items-center gap-2">
-            <Button asChild>
-              <Link href="/add-meal">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Quick Add Meal
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/add-work">
-                <Dumbbell className="mr-2 h-4 w-4" />
-                Quick Log Workout
-              </Link>
-            </Button>
-          </div>
+          <AddEntryButton />
         </div>
       </div>
 

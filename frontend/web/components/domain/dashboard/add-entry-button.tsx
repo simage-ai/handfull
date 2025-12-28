@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UtensilsCrossed, Dumbbell, PlusCircle } from "lucide-react";
+import { UtensilsCrossed, Dumbbell, PlusCircle, Droplets, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,9 +27,15 @@ export function AddEntryButton({
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  const handleAddOption = (type: "meal" | "workout") => {
+  const handleAddOption = (type: "meal" | "workout" | "water" | "note") => {
     setOpen(false);
-    router.push(type === "meal" ? "/add-meal" : "/add-work");
+    const routes: Record<typeof type, string> = {
+      meal: "/add-meal",
+      workout: "/add-work",
+      water: "/add-water",
+      note: "/notes",
+    };
+    router.push(routes[type]);
   };
 
   return (
@@ -49,7 +55,7 @@ export function AddEntryButton({
           <DialogHeader>
             <DialogTitle>What would you like to log?</DialogTitle>
             <DialogDescription>
-              Choose to log a meal or a workout session.
+              Choose what you&apos;d like to track
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
@@ -68,6 +74,22 @@ export function AddEntryButton({
             >
               <Dumbbell className="h-8 w-8" />
               <span>Log Workout</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => handleAddOption("water")}
+            >
+              <Droplets className="h-8 w-8 text-cyan-500" />
+              <span>Log Water</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => handleAddOption("note")}
+            >
+              <StickyNote className="h-8 w-8 text-amber-500" />
+              <span>Add Note</span>
             </Button>
           </div>
         </DialogContent>
