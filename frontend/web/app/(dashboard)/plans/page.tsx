@@ -43,9 +43,11 @@ import {
   ChevronRight,
   UtensilsCrossed,
   Dumbbell,
+  Droplets,
 } from "lucide-react";
 import { EXERCISE_CATEGORIES } from "@/lib/exercises";
-import type { ExerciseCategory } from "@prisma/client";
+import { WATER_UNIT_LABELS, WATER_UNIT_SHORT, WATER_CONFIG } from "@/lib/water";
+import type { ExerciseCategory, WaterUnit } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -154,13 +156,29 @@ type WorkoutPlanFormValues = z.infer<typeof workoutPlanFormSchema>;
 // Custom Exercise Form
 const customExerciseFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
-  category: z.enum(["LOWER_BODY_GLUTES", "UPPER_BODY_CORE", "FULL_BODY_CARDIO"]),
+  category: z.enum(["LOWER_BODY_GLUTES", "UPPER_BODY_CORE", "FULL_BODY_CARDIO", "STRETCHES"]),
   unit: z.string().min(1, "Unit is required").max(50),
 });
 
 type CustomExerciseFormValues = z.infer<typeof customExerciseFormSchema>;
 
-type PlanMode = "meals" | "workouts";
+// --- Water Plan Types ---
+interface WaterPlan {
+  id: string;
+  name: string;
+  dailyTarget: number;
+  unit: WaterUnit;
+}
+
+const waterPlanFormSchema = z.object({
+  name: z.string().min(1, "Name is required").max(255),
+  dailyTarget: z.coerce.number().min(1, "Target must be at least 1"),
+  unit: z.enum(["FLUID_OUNCES", "GLASSES", "CUPS", "LITERS", "MILLILITERS"]),
+});
+
+type WaterPlanFormValues = z.infer<typeof waterPlanFormSchema>;
+
+type PlanMode = "meals" | "workouts" | "water";
 
 export default function PlansPage() {
   const router = useRouter();
@@ -171,6 +189,8 @@ export default function PlansPage() {
     const hash = window.location.hash.replace("#", "");
     if (hash === "workouts" || hash === "work") {
       setMode("workouts");
+    } else if (hash === "water") {
+      setMode("water");
     } else if (hash === "meals") {
       setMode("meals");
     }
@@ -179,7 +199,8 @@ export default function PlansPage() {
   // Update hash when mode changes
   const handleModeChange = (newMode: PlanMode) => {
     setMode(newMode);
-    window.history.replaceState(null, "", `#${newMode === "workouts" ? "work" : "meals"}`);
+    const hashMap = { meals: "meals", workouts: "work", water: "water" };
+    window.history.replaceState(null, "", `#${hashMap[newMode]}`);
   };
 
   // --- Meal Plans State ---
@@ -207,11 +228,19 @@ export default function PlansPage() {
     LOWER_BODY_GLUTES: true,
     UPPER_BODY_CORE: true,
     FULL_BODY_CARDIO: true,
+    STRETCHES: true,
   });
   const [customExerciseDialogOpen, setCustomExerciseDialogOpen] =
     useState(false);
   const [isCustomExerciseSubmitting, setIsCustomExerciseSubmitting] =
     useState(false);
+
+  // --- Water Plans State ---
+  const [waterPlans, setWaterPlans] = useState<WaterPlan[]>([]);
+  const [activeWaterPlanId, setActiveWaterPlanId] = useState<string | null>(null);
+  const [waterDialogOpen, setWaterDialogOpen] = useState(false);
+  const [editingWaterPlan, setEditingWaterPlan] = useState<WaterPlan | null>(null);
+  const [isWaterSubmitting, setIsWaterSubmitting] = useState(false);
 
   const form = useForm<PlanFormValues>({
     resolver: zodResolver(planFormSchema),
@@ -242,19 +271,29 @@ export default function PlansPage() {
     },
   });
 
+  const waterForm = useForm<WaterPlanFormValues>({
+    resolver: zodResolver(waterPlanFormSchema),
+    defaultValues: {
+      name: "",
+      dailyTarget: 64,
+      unit: "FLUID_OUNCES",
+    },
+  });
+
   useEffect(() => {
     fetchPlans();
     fetchWorkoutPlans();
     fetchExercises();
+    fetchWaterPlans();
   }, []);
 
   // Trigger bar animation after plans load
   useEffect(() => {
-    if (!isLoading && (plans.length > 0 || workoutPlans.length > 0)) {
+    if (!isLoading && (plans.length > 0 || workoutPlans.length > 0 || waterPlans.length > 0)) {
       const timer = setTimeout(() => setAnimateBars(true), 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, plans.length, workoutPlans.length]);
+  }, [isLoading, plans.length, workoutPlans.length, waterPlans.length]);
 
   // --- Meal Plan Functions ---
   async function fetchPlans() {
@@ -498,6 +537,101 @@ export default function PlansPage() {
     }
   }
 
+  // --- Water Plan Functions ---
+  async function fetchWaterPlans() {
+    try {
+      const res = await fetch("/api/rest/v1/water-plans");
+      const data = await res.json();
+      setWaterPlans(data.data);
+      setActiveWaterPlanId(data.activeWaterPlanId);
+    } catch {
+      toast.error("Failed to load water plans");
+    }
+  }
+
+  function openWaterCreateDialog() {
+    setEditingWaterPlan(null);
+    waterForm.reset({
+      name: "",
+      dailyTarget: 64,
+      unit: "FLUID_OUNCES",
+    });
+    setWaterDialogOpen(true);
+  }
+
+  function openWaterEditDialog(plan: WaterPlan) {
+    setEditingWaterPlan(plan);
+    waterForm.reset({
+      name: plan.name,
+      dailyTarget: plan.dailyTarget,
+      unit: plan.unit,
+    });
+    setWaterDialogOpen(true);
+  }
+
+  async function onWaterSubmit(data: WaterPlanFormValues) {
+    setIsWaterSubmitting(true);
+    try {
+      if (editingWaterPlan) {
+        const res = await fetch(`/api/rest/v1/water-plans/${editingWaterPlan.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to update water plan");
+        toast.success("Water plan updated!");
+      } else {
+        const res = await fetch("/api/rest/v1/water-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to create water plan");
+        toast.success("Water plan created!");
+      }
+      waterForm.reset();
+      setWaterDialogOpen(false);
+      setEditingWaterPlan(null);
+      fetchWaterPlans();
+      window.history.replaceState(null, "", "#water");
+      router.refresh();
+    } catch {
+      toast.error(
+        editingWaterPlan ? "Failed to update water plan" : "Failed to create water plan"
+      );
+    } finally {
+      setIsWaterSubmitting(false);
+    }
+  }
+
+  async function activateWaterPlan(planId: string) {
+    try {
+      const res = await fetch(`/api/rest/v1/water-plans/${planId}/activate`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to activate water plan");
+      toast.success("Water plan activated!");
+      setActiveWaterPlanId(planId);
+      router.refresh();
+    } catch {
+      toast.error("Failed to activate water plan");
+    }
+  }
+
+  async function deleteWaterPlan(planId: string) {
+    try {
+      const res = await fetch(`/api/rest/v1/water-plans/${planId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete water plan");
+      toast.success("Water plan deleted!");
+      fetchWaterPlans();
+      router.refresh();
+    } catch {
+      toast.error("Failed to delete water plan");
+    }
+  }
+
   // Toggle category expansion
   function toggleCategory(category: ExerciseCategory) {
     setExpandedCategories((prev) => ({
@@ -693,7 +827,7 @@ export default function PlansPage() {
                 </Form>
               </DialogContent>
             </Dialog>
-          ) : (
+          ) : mode === "workouts" ? (
             <Dialog
               open={workoutDialogOpen}
               onOpenChange={(open) => {
@@ -986,19 +1120,113 @@ export default function PlansPage() {
                 </Form>
               </DialogContent>
             </Dialog>
+          ) : (
+            <Dialog
+              open={waterDialogOpen}
+              onOpenChange={(open) => {
+                setWaterDialogOpen(open);
+                if (!open) setEditingWaterPlan(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={openWaterCreateDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Plan
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingWaterPlan ? "Edit Water Plan" : "Create Water Plan"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Set your daily hydration goal.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...waterForm}>
+                  <form
+                    onSubmit={waterForm.handleSubmit(onWaterSubmit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={waterForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Plan Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Summer Hydration" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={waterForm.control}
+                        name="dailyTarget"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Daily Target</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={1} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={waterForm.control}
+                        name="unit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unit</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select unit" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {(Object.entries(WATER_UNIT_LABELS) as [WaterUnit, string][]).map(
+                                  ([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {label}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <Button type="submit" disabled={isWaterSubmitting} className="w-full">
+                      {isWaterSubmitting && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {editingWaterPlan ? "Save Changes" : "Create Plan"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
         <p className="text-muted-foreground">
           {mode === "meals"
             ? "Create and manage your daily macro slot allocations."
-            : "Create and manage your daily exercise targets."}
+            : mode === "workouts"
+            ? "Create and manage your daily exercise targets."
+            : "Create and manage your daily hydration goals."}
         </p>
         <Tabs
           value={mode}
           onValueChange={(value) => handleModeChange(value as PlanMode)}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="meals" className="flex items-center justify-center gap-2">
               <UtensilsCrossed className="h-4 w-4" />
               Meals
@@ -1009,6 +1237,13 @@ export default function PlansPage() {
             >
               <Dumbbell className="h-4 w-4" />
               Work
+            </TabsTrigger>
+            <TabsTrigger
+              value="water"
+              className="flex items-center justify-center gap-2"
+            >
+              <Droplets className="h-4 w-4" />
+              Water
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -1021,7 +1256,9 @@ export default function PlansPage() {
           <p className="text-muted-foreground">
             {mode === "meals"
               ? "Create and manage your daily macro slot allocations."
-              : "Create and manage your daily exercise targets."}
+              : mode === "workouts"
+              ? "Create and manage your daily exercise targets."
+              : "Create and manage your daily hydration goals."}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -1030,7 +1267,7 @@ export default function PlansPage() {
             onValueChange={(value) => handleModeChange(value as PlanMode)}
             className="w-auto"
           >
-            <TabsList className="grid w-[200px] grid-cols-2">
+            <TabsList className="grid w-[300px] grid-cols-3">
               <TabsTrigger value="meals" className="flex items-center gap-2">
                 <UtensilsCrossed className="h-4 w-4" />
                 Meals
@@ -1038,6 +1275,10 @@ export default function PlansPage() {
               <TabsTrigger value="workouts" className="flex items-center gap-2">
                 <Dumbbell className="h-4 w-4" />
                 Work
+              </TabsTrigger>
+              <TabsTrigger value="water" className="flex items-center gap-2">
+                <Droplets className="h-4 w-4" />
+                Water
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -1163,7 +1404,7 @@ export default function PlansPage() {
                 </Form>
               </DialogContent>
             </Dialog>
-          ) : (
+          ) : mode === "workouts" ? (
             <Dialog
               open={workoutDialogOpen}
               onOpenChange={(open) => {
@@ -1456,6 +1697,98 @@ export default function PlansPage() {
                 </Form>
               </DialogContent>
             </Dialog>
+          ) : (
+            <Dialog
+              open={waterDialogOpen}
+              onOpenChange={(open) => {
+                setWaterDialogOpen(open);
+                if (!open) setEditingWaterPlan(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button onClick={openWaterCreateDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Plan
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingWaterPlan ? "Edit Water Plan" : "Create Water Plan"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Set your daily hydration goal.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...waterForm}>
+                  <form
+                    onSubmit={waterForm.handleSubmit(onWaterSubmit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={waterForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Plan Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Summer Hydration" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={waterForm.control}
+                        name="dailyTarget"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Daily Target</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={1} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={waterForm.control}
+                        name="unit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unit</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select unit" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {(Object.entries(WATER_UNIT_LABELS) as [WaterUnit, string][]).map(
+                                  ([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {label}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <Button type="submit" disabled={isWaterSubmitting} className="w-full">
+                      {isWaterSubmitting && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {editingWaterPlan ? "Save Changes" : "Create Plan"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </div>
@@ -1565,16 +1898,17 @@ export default function PlansPage() {
               })}
           </div>
         )
-      ) : workoutPlans.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Workout Plans Yet</CardTitle>
-            <CardDescription>
-              Create your first workout plan to start tracking exercises.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : (
+      ) : mode === "workouts" ? (
+        workoutPlans.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>No Workout Plans Yet</CardTitle>
+              <CardDescription>
+                Create your first workout plan to start tracking exercises.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[...workoutPlans]
             .sort((a, b) => {
@@ -1674,6 +2008,84 @@ export default function PlansPage() {
                 </Card>
               );
             })}
+        </div>
+        )
+      ) : waterPlans.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Water Plans Yet</CardTitle>
+            <CardDescription>
+              Create your first water plan to start tracking hydration.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...waterPlans]
+            .sort((a, b) => {
+              if (a.id === activeWaterPlanId) return -1;
+              if (b.id === activeWaterPlanId) return 1;
+              return 0;
+            })
+            .map((plan) => (
+              <Card
+                key={plan.id}
+                className={cn(
+                  activeWaterPlanId === plan.id && "ring-2 ring-primary"
+                )}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{plan.name}</CardTitle>
+                    {activeWaterPlanId === plan.id && (
+                      <Badge variant="default">Active</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <Droplets className={`h-8 w-8 ${WATER_CONFIG.text}`} />
+                      <div>
+                        <p className="text-2xl font-bold">{plan.dailyTarget}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {WATER_UNIT_SHORT[plan.unit]} per day
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`h-2 rounded-full ${WATER_CONFIG.bg}`} />
+                  </div>
+                  <div className="flex gap-2 pt-2 border-t">
+                    {activeWaterPlanId !== plan.id && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => activateWaterPlan(plan.id)}
+                      >
+                        Activate
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-primary"
+                      onClick={() => openWaterEditDialog(plan)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteWaterPlan(plan.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
         </div>
       )}
     </div>

@@ -1,0 +1,229 @@
+"use client";
+
+import { useState } from "react";
+import { format } from "date-fns";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MealsTable } from "./meals-table";
+import { MealDetailDialog } from "../share/meal-detail-dialog";
+import { Table2, LayoutGrid, StickyNote } from "lucide-react";
+
+const MACRO_COLORS = {
+  proteins: { bg: "bg-red-100", text: "text-red-700", border: "border-red-200" },
+  carbs: { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
+  fats: { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-200" },
+  veggies: { bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },
+  junk: { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
+} as const;
+
+type MacroKey = keyof typeof MACRO_COLORS;
+
+function formatMealCategory(category: string | null): string {
+  if (!category) return "Meal";
+  return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+}
+
+function gcsPathToProxyUrl(gcsPath: string | null): string | null {
+  if (!gcsPath || !gcsPath.startsWith("gs://")) return null;
+  const withoutProtocol = gcsPath.replace("gs://", "");
+  const slashIndex = withoutProtocol.indexOf("/");
+  if (slashIndex === -1) return null;
+  const filePath = withoutProtocol.substring(slashIndex + 1);
+  return `/api/rest/v1/images/${filePath}`;
+}
+
+interface Note {
+  id: string;
+  text: string;
+}
+
+interface Meal {
+  id: string;
+  proteinsUsed: number;
+  fatsUsed: number;
+  carbsUsed: number;
+  veggiesUsed: number;
+  junkUsed: number;
+  image: string | null;
+  mealCategory: string | null;
+  dateTime: Date;
+  notes: Note[];
+}
+
+interface MealWithImageUrl extends Meal {
+  imageUrl: string | null;
+}
+
+interface MealsContentProps {
+  meals: Meal[];
+}
+
+type ViewMode = "table" | "gallery";
+type SortOrder = "newest" | "oldest";
+
+export function MealsContent({ meals }: MealsContentProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [selectedMeal, setSelectedMeal] = useState<MealWithImageUrl | null>(null);
+
+  // Sort meals based on sortOrder (only for gallery view)
+  const sortedMeals = [...meals].sort((a, b) => {
+    const dateA = new Date(a.dateTime).getTime();
+    const dateB = new Date(b.dateTime).getTime();
+    return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+  });
+
+  const handleMealClick = (meal: Meal) => {
+    const mealWithImageUrl: MealWithImageUrl = {
+      ...meal,
+      imageUrl: gcsPathToProxyUrl(meal.image),
+    };
+    setSelectedMeal(mealWithImageUrl);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* View Toggle and Sort Controls */}
+      <div className="flex items-center justify-between gap-4">
+        <Tabs
+          value={viewMode}
+          onValueChange={(v) => setViewMode(v as ViewMode)}
+          className="w-auto"
+        >
+          <TabsList>
+            <TabsTrigger value="table" className="flex items-center gap-2">
+              <Table2 className="h-4 w-4" />
+              Table
+            </TabsTrigger>
+            <TabsTrigger value="gallery" className="flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Gallery
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {viewMode === "gallery" && (
+          <Select
+            value={sortOrder}
+            onValueChange={(v) => setSortOrder(v as SortOrder)}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest First</SelectItem>
+              <SelectItem value="oldest">Oldest First</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      {/* Table View */}
+      {viewMode === "table" && (
+        <MealsTable meals={meals} onViewMeal={handleMealClick} />
+      )}
+
+      {/* Gallery View */}
+      {viewMode === "gallery" && (
+        <>
+          {sortedMeals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
+              <p className="text-lg font-medium text-muted-foreground">
+                No meals yet
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Meals will appear here once logged
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {sortedMeals.map((meal) => {
+                const imageUrl = gcsPathToProxyUrl(meal.image);
+                const macros = (
+                  [
+                    { key: "proteins" as const, value: meal.proteinsUsed, label: "P" },
+                    { key: "carbs" as const, value: meal.carbsUsed, label: "C" },
+                    { key: "fats" as const, value: meal.fatsUsed, label: "F" },
+                    { key: "veggies" as const, value: meal.veggiesUsed, label: "V" },
+                    { key: "junk" as const, value: meal.junkUsed, label: "J" },
+                  ] as { key: MacroKey; value: number; label: string }[]
+                ).filter((m) => m.value > 0);
+
+                return (
+                  <Card
+                    key={meal.id}
+                    className="cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5"
+                    onClick={() => handleMealClick(meal)}
+                  >
+                    {imageUrl ? (
+                      <div className="aspect-square overflow-hidden bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrl}
+                          alt={meal.mealCategory || "Meal"}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                        <span className="text-4xl opacity-50">🍽️</span>
+                      </div>
+                    )}
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">
+                            {format(new Date(meal.dateTime), "MMM d, yyyy")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(meal.dateTime), "h:mm a")}
+                          </p>
+                        </div>
+                        {meal.mealCategory && (
+                          <Badge variant="secondary" className="shrink-0 text-xs">
+                            {formatMealCategory(meal.mealCategory)}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {macros.map(({ key, value, label }) => (
+                          <span
+                            key={key}
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${MACRO_COLORS[key].bg} ${MACRO_COLORS[key].text} ${MACRO_COLORS[key].border}`}
+                          >
+                            {value}
+                            {label}
+                          </span>
+                        ))}
+                        {meal.notes.length > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                            <StickyNote className="h-3 w-3" />
+                            {meal.notes.length}
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      <MealDetailDialog
+        meal={selectedMeal}
+        open={!!selectedMeal}
+        onOpenChange={(open) => !open && setSelectedMeal(null)}
+      />
+    </div>
+  );
+}

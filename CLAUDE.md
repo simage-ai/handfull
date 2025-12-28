@@ -140,10 +140,19 @@ palm/
 - **Recharts** for radial charts
 
 ### Database Models
-- **User**: email, firstName, lastName, activePlanId
+- **User**: email, firstName, lastName, activePlanId, sharingEnabled, activeWorkoutPlanId, activeWaterPlanId
 - **Meal**: macros (proteins, fats, carbs, veggies, junk), image, dateTime, mealCategory, notes
 - **Plan**: name, slot allocations (protein, fat, carb, veggie, junk)
-- **Note**: text, linked to Meal
+- **Note**: text, linked to Meal (meal notes)
+- **Workout**: dateTime, notes, exercises (via WorkoutExercise)
+- **WorkoutPlan**: name, exercises with daily targets
+- **Exercise**: name, category, unit, isCustom
+- **Water**: amount, unit (FLUID_OUNCES, GLASSES, CUPS, LITERS, MILLILITERS), dateTime, notes
+- **WaterPlan**: name, dailyTarget, unit
+- **JournalEntry**: text, dateTime, tags (for personal notes/journaling)
+- **Tag**: name, color (for organizing journal entries)
+- **Follow**: follower-following relationship between users
+- **FollowRequest**: pending follow requests with token-based email verification
 
 ### REST API Pattern
 All API routes under `/app/api/rest/v1/`:
@@ -166,15 +175,90 @@ All API routes under `/app/api/rest/v1/`:
 
 ### Dashboard Features
 - Radial chart showing daily macro slot usage vs active plan
-- Sidebar navigation: Home, Meals, Plans, Settings
-- Quick add meal button
-- Today's meals summary
+- Workout radial chart showing exercise progress by category
+- Sidebar navigation: Home, Meals, Workouts, Water, Notes, Plans, Portion Guide, Settings
+- Add Entry button (opens dialog with: Log Meal, Log Workout, Log Water, Add Note)
+- Today's meals and workouts summary
+- Mode toggle between Meals and Workouts views
+
+### Water Tracking
+- **Routes**: `/water` (dashboard), `/add-water` (add entry)
+- **API**: `/api/rest/v1/water` (CRUD), `/api/rest/v1/water-plans` (CRUD + activate)
+- **Units**: Fluid Ounces, Glasses (8 oz), Cups, Liters, Milliliters
+- **Features**:
+  - Quick add presets (1 Glass, 1 Cup, 16 oz, 500 mL, 1 Liter)
+  - Automatic conversion to fluid ounces for daily totals
+  - Radial progress chart showing daily goal progress
+  - Daily/weekly bar chart history
+  - Table view with edit/delete
+- **Utility**: `lib/water.ts` for unit conversions
+
+### Notes/Journaling
+- **Routes**: `/notes` (dashboard with inline add)
+- **API**: `/api/rest/v1/journal` (CRUD), `/api/rest/v1/tags` (CRUD)
+- **Features**:
+  - Create notes with free-form text
+  - Tag notes with custom colored tags
+  - Create tags on-the-fly while adding notes
+  - Filter notes by tag, search text
+  - Table view with edit/delete
+  - Tag management with usage counts
 
 ### Share Feature
 - Public URL: `/share/{userId}`
 - No authentication required for viewers
 - Gallery view of meals with sorting/filtering
 - Click to view meal details with macros and notes
+
+### Follow System & Feed
+The follow system allows users to connect with trainers, nutritionists, or friends to share and view meal logs.
+
+**Request Types:**
+- `FOLLOW`: "I want to follow your meals" - requester sees target's meals
+- `INVITE`: "Please follow my meals" - target sees requester's meals
+
+**Flow:**
+1. User enters email and selects request type in Settings
+2. System generates secure token and sends email via Resend
+3. Recipient clicks link in email → signs in if needed → accepts/rejects
+4. On accept: Follow relationship created
+
+**API Endpoints:**
+- `POST /api/rest/v1/follow-requests` - Send a follow request/invitation
+- `GET /api/rest/v1/follow-requests` - List pending requests (sent/received)
+- `GET /api/rest/v1/follow-requests/[token]` - Get request details
+- `POST /api/rest/v1/follow-requests/[token]/accept` - Accept request
+- `POST /api/rest/v1/follow-requests/[token]/reject` - Reject request
+- `GET /api/rest/v1/following` - List users I'm following
+- `GET /api/rest/v1/followers` - List users following me
+- `DELETE /api/rest/v1/following/[userId]` - Unfollow a user
+- `DELETE /api/rest/v1/followers/[userId]` - Remove a follower
+- `GET /api/rest/v1/feed` - Get combined meals from all followed users
+
+**Pages:**
+- `/feed` - Unified feed showing meals from all followed users
+- `/follow/[token]` - Accept/reject follow requests from email links
+- `/settings` - Follow management UI (send requests, view connections)
+
+**Email Service (Resend):**
+- Configure `RESEND_API_KEY` for production email delivery
+- Without API key, emails are logged to console (development mode)
+- Email templates in `lib/email.ts`
+
+### Environment Variables
+Required:
+- `DATABASE_URL` - PostgreSQL connection string
+- `AUTH_SECRET` - Auth.js secret
+- `AUTH_GOOGLE_ID` - Google OAuth client ID
+- `AUTH_GOOGLE_SECRET` - Google OAuth client secret
+- `GCS_BUCKET_NAME` - Google Cloud Storage bucket
+
+Optional:
+- `RESEND_API_KEY` - Resend API key for email delivery
+- `EMAIL_FROM` - From address for emails (default: "Palm <noreply@palm.example.com>")
+- `NEXT_PUBLIC_APP_URL` - App URL for email links
+- `AUTH_URL` - Auth.js callback URL
+- `GCP_SERVICE_ACCOUNT_KEY` - GCS service account (uses ADC if not set)
 
 ### Reference Projects
 When implementing new features, reference these existing codebases for patterns:

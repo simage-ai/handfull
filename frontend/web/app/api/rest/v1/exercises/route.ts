@@ -30,10 +30,15 @@ export async function GET() {
     orderBy: [{ category: "asc" }, { name: "asc" }],
   });
 
-  // If no pre-defined exercises exist, seed them
-  if (preDefinedExercises.length === 0) {
+  // Sync missing pre-defined exercises
+  const existingNames = new Set(preDefinedExercises.map((e) => e.name));
+  const missingExercises = PRE_DEFINED_EXERCISES.filter(
+    (e) => !existingNames.has(e.name)
+  );
+
+  if (missingExercises.length > 0) {
     const seededExercises = await prisma.$transaction(
-      PRE_DEFINED_EXERCISES.map((exercise) =>
+      missingExercises.map((exercise) =>
         prisma.exercise.create({
           data: {
             name: exercise.name,
@@ -47,7 +52,7 @@ export async function GET() {
     );
 
     return NextResponse.json({
-      data: [...seededExercises, ...customExercises],
+      data: [...preDefinedExercises, ...seededExercises, ...customExercises],
     });
   }
 

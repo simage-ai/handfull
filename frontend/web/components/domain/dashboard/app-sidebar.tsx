@@ -12,6 +12,9 @@ import {
   PlusCircle,
   BookOpen,
   Dumbbell,
+  Droplets,
+  StickyNote,
+  Rss,
 } from "lucide-react";
 import { GITHUB_REPO_URL } from "@/lib/config";
 
@@ -48,8 +51,11 @@ import {
 
 const menuItems = [
   { title: "Home", url: "/dashboard", icon: Home },
+  { title: "Feed", url: "/feed", icon: Rss },
   { title: "Meals", url: "/meals", icon: UtensilsCrossed },
   { title: "Workouts", url: "/workouts", icon: Dumbbell },
+  { title: "Water", url: "/water", icon: Droplets },
+  { title: "Notes", url: "/notes", icon: StickyNote },
   { title: "Plans", url: "/plans", icon: ClipboardList },
   { title: "Portion Guide", url: "/guide", icon: BookOpen },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -61,10 +67,16 @@ export function AppSidebar() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const { setOpenMobile, isMobile } = useSidebar();
 
-  const handleAddOption = (type: "meal" | "workout") => {
+  const handleAddOption = (type: "meal" | "workout" | "water" | "note") => {
     setAddDialogOpen(false);
     if (isMobile) setOpenMobile(false);
-    router.push(type === "meal" ? "/add-meal" : "/add-work");
+    const routes: Record<typeof type, string> = {
+      meal: "/add-meal",
+      workout: "/add-work",
+      water: "/add-water",
+      note: "/notes", // Notes page has inline add dialog
+    };
+    router.push(routes[type]);
   };
 
   const handleNavClick = () => {
@@ -145,7 +157,7 @@ export function AppSidebar() {
           <DialogHeader>
             <DialogTitle>What would you like to log?</DialogTitle>
             <DialogDescription>
-              Choose to log a meal or a workout session.
+              Choose what you&apos;d like to track
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
@@ -164,6 +176,22 @@ export function AppSidebar() {
             >
               <Dumbbell className="h-8 w-8" />
               <span>Log Workout</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => handleAddOption("water")}
+            >
+              <Droplets className="h-8 w-8 text-cyan-500" />
+              <span>Log Water</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => handleAddOption("note")}
+            >
+              <StickyNote className="h-8 w-8 text-amber-500" />
+              <span>Add Note</span>
             </Button>
           </div>
         </DialogContent>

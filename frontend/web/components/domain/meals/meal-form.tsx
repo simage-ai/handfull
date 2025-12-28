@@ -29,7 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Loader2, Upload, X, ImageIcon, HelpCircle } from "lucide-react";
+import { Loader2, Upload, X, ImageIcon, HelpCircle, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mealFormSchema = z.object({
@@ -77,6 +77,11 @@ function gcsPathToProxyUrl(gcsPath: string): string | null {
   return `/api/rest/v1/images/${filePath}`;
 }
 
+interface EditableNote {
+  id?: string;
+  text: string;
+}
+
 export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,6 +89,10 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [removeExistingImage, setRemoveExistingImage] = useState(false);
+  const [editableNotes, setEditableNotes] = useState<EditableNote[]>(
+    meal?.notes?.map((n) => ({ id: n.id, text: n.text })) || []
+  );
+  const [newNoteText, setNewNoteText] = useState("");
 
   const isEditMode = !!meal;
 
@@ -207,6 +216,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
           veggiesUsed: data.veggiesUsed,
           junkUsed: data.junkUsed,
           mealCategory: data.mealCategory || null,
+          notes: editableNotes.filter((n) => n.text.trim()),
         };
 
         // Only include image if it changed
@@ -500,8 +510,68 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
           )}
         />
 
-        {/* Notes - only show for new meals */}
-        {!isEditMode && (
+        {/* Notes */}
+        {isEditMode ? (
+          <div className="space-y-3">
+            <FormLabel>Notes</FormLabel>
+
+            {/* Existing notes */}
+            {editableNotes.length > 0 && (
+              <div className="space-y-2">
+                {editableNotes.map((note, index) => (
+                  <div key={note.id || `new-${index}`} className="flex gap-2">
+                    <Textarea
+                      value={note.text}
+                      onChange={(e) => {
+                        const updated = [...editableNotes];
+                        updated[index] = { ...note, text: e.target.value };
+                        setEditableNotes(updated);
+                      }}
+                      placeholder="Note text..."
+                      className="min-h-[60px]"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setEditableNotes(editableNotes.filter((_, i) => i !== index));
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new note */}
+            <div className="flex gap-2">
+              <Textarea
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                placeholder="Add a new note..."
+                className="min-h-[60px]"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                disabled={!newNoteText.trim()}
+                onClick={() => {
+                  if (newNoteText.trim()) {
+                    setEditableNotes([...editableNotes, { text: newNoteText.trim() }]);
+                    setNewNoteText("");
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : (
           <FormField
             control={form.control}
             name="notes"
