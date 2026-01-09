@@ -11,8 +11,8 @@ const CreateMealSchema = z.object({
   carbsUsed: z.number().min(0).default(0),
   veggiesUsed: z.number().min(0).default(0),
   junkUsed: z.number().min(0).default(0),
-  image: z.string().optional(),
-  mealCategory: z.enum(["BREAKFAST", "LUNCH", "DINNER", "SNACK"]).optional(),
+  image: z.string().nullable().optional(),
+  mealCategory: z.enum(["BREAKFAST", "LUNCH", "DINNER", "SNACK"]).nullable().optional(),
   dateTime: z.string().datetime().optional(),
   notes: z.array(z.string()).optional(),
 });
@@ -144,8 +144,8 @@ export async function POST(request: NextRequest) {
         carbsUsed: validated.carbsUsed,
         veggiesUsed: validated.veggiesUsed,
         junkUsed: validated.junkUsed,
-        image: validated.image,
-        mealCategory: validated.mealCategory,
+        image: validated.image ?? undefined,
+        mealCategory: validated.mealCategory ?? undefined,
         dateTime: validated.dateTime ? new Date(validated.dateTime) : new Date(),
         notes: validated.notes?.length
           ? {
