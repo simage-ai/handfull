@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FeedMealDialog } from "./feed-meal-dialog";
+import { LazyImage } from "@/components/ui/lazy-image";
 import { Loader2, Users, Settings, Calendar, Filter, X } from "lucide-react";
 import Link from "next/link";
 
@@ -100,15 +101,51 @@ export function FeedContent() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Fetch meals with filters
-  const fetchMeals = useCallback(
-    async (reset = false, currentCursor?: string | null) => {
+  // Fetch more meals
+  const fetchMoreMeals = useCallback(async () => {
+    if (isLoading || !hasMore) return;
+
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (cursor) {
+        params.set("cursor", cursor);
+      }
+      if (filterUserId !== "all") {
+        params.set("userIds", filterUserId);
+      }
+      if (timeRange !== "all") {
+        params.set("timeRange", timeRange);
+      }
+
+      const res = await fetch(`/api/rest/v1/feed?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch feed");
+
+      const data = await res.json();
+      setMeals((prev) => [...prev, ...data.data]);
+      setCursor(data.meta.nextCursor);
+      setHasMore(data.meta.hasMore);
+      setTotalFollowing(data.meta.totalFollowing);
+      if (data.meta.followedUsers) {
+        setFollowedUsers(data.meta.followedUsers);
+      }
+    } catch (error) {
+      console.error("Error fetching feed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [cursor, hasMore, isLoading, filterUserId, timeRange]);
+
+  // Initial fetch and refetch when filters change
+  useEffect(() => {
+    const fetchInitial = async () => {
+      setMeals([]);
+      setCursor(null);
+      setHasMore(true);
       setIsLoading(true);
+
       try {
         const params = new URLSearchParams();
-        if (!reset && currentCursor) {
-          params.set("cursor", currentCursor);
-        }
         if (filterUserId !== "all") {
           params.set("userIds", filterUserId);
         }
@@ -120,13 +157,7 @@ export function FeedContent() {
         if (!res.ok) throw new Error("Failed to fetch feed");
 
         const data = await res.json();
-
-        if (reset) {
-          setMeals(data.data);
-        } else {
-          setMeals((prev) => [...prev, ...data.data]);
-        }
-
+        setMeals(data.data);
         setCursor(data.meta.nextCursor);
         setHasMore(data.meta.hasMore);
         setTotalFollowing(data.meta.totalFollowing);
@@ -138,16 +169,10 @@ export function FeedContent() {
       } finally {
         setIsLoading(false);
       }
-    },
-    [filterUserId, timeRange]
-  );
+    };
 
-  // Initial fetch and refetch when filters change
-  useEffect(() => {
-    setCursor(null);
-    setMeals([]);
-    fetchMeals(true, null);
-  }, [filterUserId, timeRange, fetchMeals]);
+    fetchInitial();
+  }, [filterUserId, timeRange]);
 
   // Set up intersection observer for infinite scroll
   useEffect(() => {
@@ -155,8 +180,8 @@ export function FeedContent() {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && hasMore && !isLoading && cursor) {
-          fetchMeals(false, cursor);
+        if (entries[0]?.isIntersecting && hasMore && !isLoading) {
+          fetchMoreMeals();
         }
       },
       { threshold: 0.1, rootMargin: "100px" }
@@ -171,7 +196,7 @@ export function FeedContent() {
         observerRef.current.unobserve(currentRef);
       }
     };
-  }, [fetchMeals, hasMore, isLoading, cursor]);
+  }, [fetchMoreMeals, hasMore, isLoading]);
 
   const hasActiveFilters = filterUserId !== "all" || timeRange !== "all";
 
@@ -206,8 +231,8 @@ export function FeedContent() {
     );
   }
 
-  // Empty state - following but no meals
-  if (!isLoading && meals.length === 0) {
+  // Empty state - following but no meals (only show if no filters are active)
+  if (!isLoading && meals.length === 0 && !hasActiveFilters) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
         <p className="text-lg font-medium text-muted-foreground">
@@ -331,14 +356,13 @@ export function FeedContent() {
                   onClick={() => setSelectedMeal(meal)}
                 >
                   {meal.image ? (
-                    <div className="aspect-square overflow-hidden bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={meal.image}
-                        alt={meal.mealCategory || "Meal"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    <LazyImage
+                      src={meal.image}
+                      alt={meal.mealCategory || "Meal"}
+                      containerClassName="aspect-square bg-muted"
+                      className="h-full w-full object-cover"
+                      fallbackIcon={<span className="text-4xl opacity-50">🍽️</span>}
+                    />
                   ) : (
                     <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-muted to-muted/50">
                       <span className="text-4xl opacity-50">🍽️</span>

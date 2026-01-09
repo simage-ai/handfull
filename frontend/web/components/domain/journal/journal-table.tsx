@@ -45,7 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Trash2, ArrowUpDown, Pencil, Search, Filter, X } from "lucide-react";
+import { MoreHorizontal, Trash2, ArrowUpDown, Pencil, Search, Filter, X, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { JournalForm } from "./journal-form";
 
@@ -75,6 +75,8 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
   const [selectedTagId, setSelectedTagId] = useState<string>("");
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewingEntry, setViewingEntry] = useState<JournalEntry | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   // Filter entries by selected tag (skip if "all" or empty)
   const filteredEntries = useMemo(() => {
@@ -112,6 +114,25 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
     router.refresh();
   };
 
+  const openViewDialog = useCallback((entry: JournalEntry) => {
+    setViewingEntry(entry);
+    setViewDialogOpen(true);
+  }, []);
+
+  const closeViewDialog = () => {
+    setViewDialogOpen(false);
+    setViewingEntry(null);
+  };
+
+  const switchToEdit = () => {
+    if (viewingEntry) {
+      setViewDialogOpen(false);
+      setEditingEntry(viewingEntry);
+      setEditDialogOpen(true);
+      setViewingEntry(null);
+    }
+  };
+
   const columns: ColumnDef<JournalEntry>[] = useMemo(() => [
     {
       accessorKey: "dateTime",
@@ -124,18 +145,32 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => format(new Date(row.getValue("dateTime")), "PPp"),
+      cell: ({ row }) => {
+        const entry = row.original;
+        return (
+          <button
+            onClick={() => openViewDialog(entry)}
+            className="text-left hover:underline text-primary font-medium"
+          >
+            {format(new Date(row.getValue("dateTime")), "PPp")}
+          </button>
+        );
+      },
     },
     {
       accessorKey: "text",
       header: "Note",
       cell: ({ row }) => {
+        const entry = row.original;
         const text = row.getValue("text") as string;
         const truncated = text.length > 100 ? text.substring(0, 100) + "..." : text;
         return (
-          <div className="max-w-[400px]">
+          <button
+            onClick={() => openViewDialog(entry)}
+            className="max-w-[400px] text-left hover:bg-muted/50 rounded p-1 -m-1 transition-colors"
+          >
             <p className="whitespace-pre-wrap line-clamp-2">{truncated}</p>
-          </div>
+          </button>
         );
       },
       filterFn: "includesString",
@@ -182,6 +217,10 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => openViewDialog(entry)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openEditDialog(entry)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
@@ -198,7 +237,7 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
         );
       },
     },
-  ], [openEditDialog, deleteEntry]);
+  ], [openEditDialog, openViewDialog, deleteEntry]);
 
   const table = useReactTable({
     data: filteredEntries,
@@ -337,6 +376,56 @@ export function JournalTable({ entries, allTags }: JournalTableProps) {
           </Button>
         </div>
       </div>
+
+      {/* View Entry Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>View Note</DialogTitle>
+            <DialogDescription>
+              {viewingEntry && (
+                <>
+                  {format(new Date(viewingEntry.dateTime), "PPPP 'at' p")}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {viewingEntry && (
+            <div className="space-y-4">
+              {/* Tags */}
+              {viewingEntry.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {viewingEntry.tags.map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      className="text-white"
+                      style={{ backgroundColor: tag.color }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Note text */}
+              <div className="rounded-lg border p-4 bg-muted/30">
+                <p className="whitespace-pre-wrap">{viewingEntry.text}</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={closeViewDialog}>
+                  Close
+                </Button>
+                <Button onClick={switchToEdit}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Entry Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

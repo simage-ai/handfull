@@ -6,6 +6,7 @@
 @theme inline {
   --animate-marquee: marquee var(--duration) linear infinite;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  --animate-shimmer: shimmer 1.5s infinite;
 
   @keyframes marquee {
     from {
@@ -22,6 +23,15 @@
     }
     to {
       transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
     }
   }
 

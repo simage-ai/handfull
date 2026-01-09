@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MealDetailDialog } from "./meal-detail-dialog";
+import { LazyImage } from "@/components/ui/lazy-image";
 import { Loader2 } from "lucide-react";
 
 // Macro colors matching the radial chart
@@ -202,14 +203,13 @@ export function MealGallery({
                   onClick={() => setSelectedMeal(meal)}
                 >
                   {meal.imageUrl ? (
-                    <div className="aspect-square overflow-hidden bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={meal.imageUrl}
-                        alt={meal.mealCategory || "Meal"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    <LazyImage
+                      src={meal.imageUrl}
+                      alt={meal.mealCategory || "Meal"}
+                      containerClassName="aspect-square bg-muted"
+                      className="h-full w-full object-cover"
+                      fallbackIcon={<span className="text-4xl opacity-50">🍽️</span>}
+                    />
                   ) : (
                     <div className="flex aspect-square items-center justify-center bg-gradient-to-br from-muted to-muted/50">
                       <span className="text-4xl opacity-50">🍽️</span>

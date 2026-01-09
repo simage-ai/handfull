@@ -32,6 +32,16 @@ import { toast } from "sonner";
 import { Loader2, Upload, X, ImageIcon, HelpCircle, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+function formatDateTimeLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 const mealFormSchema = z.object({
   proteinsUsed: z.coerce.number().min(0),
   fatsUsed: z.coerce.number().min(0),
@@ -39,6 +49,7 @@ const mealFormSchema = z.object({
   veggiesUsed: z.coerce.number().min(0),
   junkUsed: z.coerce.number().min(0),
   mealCategory: z.enum(["BREAKFAST", "LUNCH", "DINNER", "SNACK"]).optional(),
+  dateTime: z.string().min(1, "Date and time is required"),
   notes: z.string().optional(),
 });
 
@@ -106,6 +117,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
       veggiesUsed: meal?.veggiesUsed ?? 0,
       junkUsed: meal?.junkUsed ?? 0,
       mealCategory: (meal?.mealCategory as MealFormValues["mealCategory"]) || undefined,
+      dateTime: formatDateTimeLocal(meal?.dateTime ? new Date(meal.dateTime) : new Date()),
       notes: meal?.notes?.[0]?.text ?? "",
     },
   });
@@ -216,6 +228,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
           veggiesUsed: data.veggiesUsed,
           junkUsed: data.junkUsed,
           mealCategory: data.mealCategory || null,
+          dateTime: new Date(data.dateTime).toISOString(),
           notes: editableNotes.filter((n) => n.text.trim()),
         };
 
@@ -240,7 +253,13 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
       } else {
         // Create new meal
         const mealData = {
-          ...data,
+          proteinsUsed: data.proteinsUsed,
+          fatsUsed: data.fatsUsed,
+          carbsUsed: data.carbsUsed,
+          veggiesUsed: data.veggiesUsed,
+          junkUsed: data.junkUsed,
+          mealCategory: data.mealCategory || null,
+          dateTime: new Date(data.dateTime).toISOString(),
           image: imagePath,
           notes: data.notes ? [data.notes] : undefined,
         };
@@ -379,7 +398,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
                   <Input
                     type="number"
                     min={0}
-                    step={0.5}
+                    step="any"
                     placeholder="0"
                     {...field}
                     value={field.value || ""}
@@ -401,7 +420,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
                   <Input
                     type="number"
                     min={0}
-                    step={0.5}
+                    step="any"
                     placeholder="0"
                     {...field}
                     value={field.value || ""}
@@ -423,7 +442,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
                   <Input
                     type="number"
                     min={0}
-                    step={0.5}
+                    step="any"
                     placeholder="0"
                     {...field}
                     value={field.value || ""}
@@ -445,7 +464,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
                   <Input
                     type="number"
                     min={0}
-                    step={0.5}
+                    step="any"
                     placeholder="0"
                     {...field}
                     value={field.value || ""}
@@ -467,7 +486,7 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
                   <Input
                     type="number"
                     min={0}
-                    step={0.5}
+                    step="any"
                     placeholder="0"
                     {...field}
                     value={field.value || ""}
@@ -481,34 +500,50 @@ export function MealForm({ meal, onSuccess, onCancel }: MealFormProps) {
           </div>
         </div>
 
-        {/* Meal Category */}
-        <FormField
-          control={form.control}
-          name="mealCategory"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Meal Type (Optional)</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                value={field.value}
-              >
+        {/* Date & Time and Meal Category */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="dateTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date & Time</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select meal type" />
-                  </SelectTrigger>
+                  <Input type="datetime-local" {...field} />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="BREAKFAST">Breakfast</SelectItem>
-                  <SelectItem value="LUNCH">Lunch</SelectItem>
-                  <SelectItem value="DINNER">Dinner</SelectItem>
-                  <SelectItem value="SNACK">Snack</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="mealCategory"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Meal Type (Optional)</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select meal type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="BREAKFAST">Breakfast</SelectItem>
+                    <SelectItem value="LUNCH">Lunch</SelectItem>
+                    <SelectItem value="DINNER">Dinner</SelectItem>
+                    <SelectItem value="SNACK">Snack</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Notes */}
         {isEditMode ? (

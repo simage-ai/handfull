@@ -29,6 +29,16 @@ import { Loader2, Droplets } from "lucide-react";
 import { WATER_UNIT_LABELS, WATER_UNIT_SHORT, toFluidOunces } from "@/lib/water";
 import type { WaterUnit } from "@prisma/client";
 
+// Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+function formatDateTimeLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 const WATER_UNITS: WaterUnit[] = [
   "FLUID_OUNCES",
   "GLASSES",
@@ -49,6 +59,7 @@ const QUICK_PRESETS = [
 const waterFormSchema = z.object({
   amount: z.coerce.number().min(0.1, "Amount must be greater than 0"),
   unit: z.enum(["FLUID_OUNCES", "GLASSES", "CUPS", "LITERS", "MILLILITERS"]),
+  dateTime: z.string().min(1, "Date and time is required"),
   notes: z.string().max(500).optional(),
 });
 
@@ -78,6 +89,7 @@ export function WaterForm({ water, onSuccess, onCancel }: WaterFormProps) {
     defaultValues: {
       amount: water?.amount ?? 8,
       unit: water?.unit ?? "FLUID_OUNCES",
+      dateTime: formatDateTimeLocal(water?.dateTime ? new Date(water.dateTime) : new Date()),
       notes: water?.notes ?? "",
     },
   });
@@ -102,6 +114,7 @@ export function WaterForm({ water, onSuccess, onCancel }: WaterFormProps) {
         body: JSON.stringify({
           amount: data.amount,
           unit: data.unit,
+          dateTime: new Date(data.dateTime).toISOString(),
           notes: data.notes || null,
         }),
       });
@@ -203,6 +216,21 @@ export function WaterForm({ water, onSuccess, onCancel }: WaterFormProps) {
             )}
           />
         </div>
+
+        {/* Date & Time */}
+        <FormField
+          control={form.control}
+          name="dateTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date & Time</FormLabel>
+              <FormControl>
+                <Input type="datetime-local" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Fluid ounces equivalent */}
         <div className="rounded-lg bg-cyan-50 dark:bg-cyan-950/30 p-4 text-center">

@@ -15,8 +15,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,16 @@ import {
 import { toast } from "sonner";
 import { Loader2, Plus, X } from "lucide-react";
 import { TagForm } from "./tag-form";
+
+// Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+function formatDateTimeLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 interface Tag {
   id: string;
@@ -50,6 +62,7 @@ interface JournalFormProps {
 
 const journalFormSchema = z.object({
   text: z.string().min(1, "Note cannot be empty").max(10000),
+  dateTime: z.string().min(1, "Date and time is required"),
   tagIds: z.array(z.string()).optional(),
 });
 
@@ -69,6 +82,7 @@ export function JournalForm({ entry, onSuccess, onCancel }: JournalFormProps) {
     resolver: zodResolver(journalFormSchema),
     defaultValues: {
       text: entry?.text ?? "",
+      dateTime: formatDateTimeLocal(entry?.dateTime ? new Date(entry.dateTime) : new Date()),
       tagIds: entry?.tags.map((t) => t.id) ?? [],
     },
   });
@@ -111,6 +125,7 @@ export function JournalForm({ entry, onSuccess, onCancel }: JournalFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: data.text,
+          dateTime: new Date(data.dateTime).toISOString(),
           tagIds: selectedTagIds,
         }),
       });
@@ -163,6 +178,20 @@ export function JournalForm({ entry, onSuccess, onCancel }: JournalFormProps) {
               <FormDescription>
                 Your notes are private and only visible to you
               </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="dateTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date & Time</FormLabel>
+              <FormControl>
+                <Input type="datetime-local" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

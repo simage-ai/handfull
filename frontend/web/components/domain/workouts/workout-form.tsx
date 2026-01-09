@@ -22,6 +22,16 @@ import { cn } from "@/lib/utils";
 import { EXERCISE_CATEGORIES } from "@/lib/exercises";
 import type { ExerciseCategory } from "@prisma/client";
 
+// Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+function formatDateTimeLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 interface Exercise {
   id: string;
   name: string;
@@ -61,6 +71,7 @@ interface WorkoutFormProps {
 }
 
 const workoutFormSchema = z.object({
+  dateTime: z.string().min(1, "Date and time is required"),
   notes: z.string().max(1000).optional(),
   exercises: z
     .array(
@@ -107,6 +118,7 @@ export function WorkoutForm({
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutFormSchema),
     defaultValues: {
+      dateTime: formatDateTimeLocal(workout?.dateTime ? new Date(workout.dateTime) : new Date()),
       notes: workout?.notes ?? "",
       exercises: getDefaultExercises(),
     },
@@ -183,6 +195,7 @@ export function WorkoutForm({
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            dateTime: new Date(data.dateTime).toISOString(),
             notes: data.notes || null,
             exercises: exercisesWithData,
           }),
@@ -198,6 +211,7 @@ export function WorkoutForm({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            dateTime: new Date(data.dateTime).toISOString(),
             notes: data.notes || undefined,
             exercises: exercisesWithData,
           }),
@@ -272,6 +286,21 @@ export function WorkoutForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Date & Time */}
+        <FormField
+          control={form.control}
+          name="dateTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date & Time</FormLabel>
+              <FormControl>
+                <Input type="datetime-local" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Exercise Inputs by Category */}
         {(Object.entries(exercisesByCategory) as [ExerciseCategory, WorkoutPlanExercise[]][]).map(
           ([category, categoryExercises]) => {

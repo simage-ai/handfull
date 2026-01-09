@@ -17,6 +17,20 @@ const CreateMealSchema = z.object({
   notes: z.array(z.string()).optional(),
 });
 
+/**
+ * Convert a GCS path (gs://bucket/path) to a proxy API URL
+ */
+function gcsPathToProxyUrl(gcsPath: string): string | null {
+  if (!gcsPath.startsWith("gs://")) return null;
+
+  const withoutProtocol = gcsPath.replace("gs://", "");
+  const slashIndex = withoutProtocol.indexOf("/");
+  if (slashIndex === -1) return null;
+
+  const filePath = withoutProtocol.substring(slashIndex + 1);
+  return `/api/rest/v1/images/${filePath}`;
+}
+
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -24,9 +38,13 @@ export async function GET(request: NextRequest) {
   }
 
   const url = new URL(request.url);
+  const cursor = url.searchParams.get("cursor");
+  const sortOrder = url.searchParams.get("sort") === "oldest" ? "asc" : "desc";
+
+  // Support both page-based and cursor-based pagination
   const page = parseInt(url.searchParams.get("page") || "1");
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "25"), 100);
-  const skip = (page - 1) * limit;
+  const skip = cursor ? undefined : (page - 1) * limit;
 
   // Date filtering
   const startDate = url.searchParams.get("startDate");
@@ -41,27 +59,69 @@ export async function GET(request: NextRequest) {
     if (endDate) where.dateTime.lte = new Date(endDate);
   }
 
+  // Cursor-based pagination
+  if (cursor) {
+    const meals = await prisma.meal.findMany({
+      where,
+      include: { notes: true },
+      orderBy: { dateTime: sortOrder },
+      take: limit + 1,
+      cursor: { id: cursor },
+      skip: 1,
+    });
+
+    const hasMore = meals.length > limit;
+    const items = hasMore ? meals.slice(0, -1) : meals;
+    const nextCursor = hasMore ? items[items.length - 1]?.id : null;
+
+    const mealsWithImageUrls = items.map((meal) => ({
+      ...meal,
+      imageUrl: meal.image ? gcsPathToProxyUrl(meal.image) : null,
+    }));
+
+    const total = await prisma.meal.count({ where });
+
+    trackApiRequest(session.user.id);
+
+    return NextResponse.json({
+      data: mealsWithImageUrls,
+      meta: {
+        total,
+        hasMore,
+        nextCursor,
+      },
+    });
+  }
+
+  // Page-based pagination (backward compatible)
   const [meals, total] = await Promise.all([
     prisma.meal.findMany({
       where,
       include: { notes: true },
-      orderBy: { dateTime: "desc" },
+      orderBy: { dateTime: sortOrder },
       skip,
       take: limit,
     }),
     prisma.meal.count({ where }),
   ]);
 
+  const mealsWithImageUrls = meals.map((meal) => ({
+    ...meal,
+    imageUrl: meal.image ? gcsPathToProxyUrl(meal.image) : null,
+  }));
+
   // Track API usage (fire and forget)
   trackApiRequest(session.user.id);
 
   return NextResponse.json({
-    data: meals,
+    data: mealsWithImageUrls,
     meta: {
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+      nextCursor: meals.length > 0 ? meals[meals.length - 1]?.id : null,
     },
   });
 }
